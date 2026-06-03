@@ -37,9 +37,13 @@ export default function AdminStudents() {
   const token = localStorage.getItem('token');
   const h = { headers: { Authorization: 'Bearer ' + token } };
 
-  const load = () => {
-    // Use your environment variable template literal instead
-await axios.post(`${process.env.REACT_APP_API_URL}/api/admin/add-student`, formData, config);
+  const load = async () => {
+    try {
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/admin/students`, h);
+      setStudents(res.data);
+    } catch (err) {
+      toast.error('Failed to load students list');
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -49,7 +53,7 @@ await axios.post(`${process.env.REACT_APP_API_URL}/api/admin/add-student`, formD
     setLoading(true);
     try {
       const res = await axios.post(
-        'http://localhost:5000/api/admin/invite-student',
+        `${process.env.REACT_APP_API_URL}/api/admin/invite-student`,
         { email: inviteEmail }, h
       );
       setInviteLink(res.data.link);
@@ -71,7 +75,7 @@ await axios.post(`${process.env.REACT_APP_API_URL}/api/admin/add-student`, formD
       const formData = new FormData();
       formData.append('file', excelFile);
       const res = await axios.post(
-        'http://localhost:5000/api/admin/upload-students-excel',
+        `${process.env.REACT_APP_API_URL}/api/admin/upload-students-excel`,
         formData,
         { headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'multipart/form-data' } }
       );
@@ -110,7 +114,7 @@ await axios.post(`${process.env.REACT_APP_API_URL}/api/admin/add-student`, formD
     setLoading(true);
     try {
       await axios.put(
-        'http://localhost:5000/api/admin/student/' + editing._id,
+        `${process.env.REACT_APP_API_URL}/api/admin/student/` + editing._id,
         editForm, h
       );
       toast.success('Student updated!');
@@ -137,7 +141,7 @@ await axios.post(`${process.env.REACT_APP_API_URL}/api/admin/add-student`, formD
     setResetLoading(true);
     try {
       await axios.put(
-        'http://localhost:5000/api/admin/student/' + resetStudent._id,
+        `${process.env.REACT_APP_API_URL}/api/admin/student/` + resetStudent._id,
         {
           name:       resetStudent.name,
           email:      resetStudent.email,
@@ -159,7 +163,7 @@ await axios.post(`${process.env.REACT_APP_API_URL}/api/admin/add-student`, formD
   const remove = async (id) => {
     if (!window.confirm('Remove this student?')) return;
     try {
-      await axios.delete('http://localhost:5000/api/admin/student/' + id, h);
+      await axios.delete(`${process.env.REACT_APP_API_URL}/api/admin/student/` + id, h);
       toast.success('Student removed');
       load();
     } catch {
@@ -364,29 +368,13 @@ await axios.post(`${process.env.REACT_APP_API_URL}/api/admin/add-student`, formD
                       <tr>
                         <td style={{ padding:'4px 0', color:'#555' }}>Login URL:</td>
                         <td style={{ padding:'4px 0' }}>
-                          <a href="http://localhost:3000/login"
-                            style={{ color:'#4f46e5', fontSize:12 }}>
-                            http://localhost:3000/login
-                          </a>
+                          <span style={{ color:'#4f46e5', fontSize:12 }}>
+                            On Live App Login Page
+                          </span>
                         </td>
                       </tr>
                     </tbody>
                   </table>
-                  <button type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(
-                        'Login URL: http://localhost:3000/login\nEmail: ' + resetStudent.email + '\nPassword: ' + newPassword
-                      );
-                      toast.success('Credentials copied!');
-                    }}
-                    style={{
-                      marginTop:10, padding:'6px 14px',
-                      background:'#4f46e5', color:'white',
-                      border:'none', borderRadius:6,
-                      cursor:'pointer', fontSize:12, fontWeight:600
-                    }}>
-                    📋 Copy Credentials
-                  </button>
                 </div>
               )}
 
@@ -428,7 +416,12 @@ await axios.post(`${process.env.REACT_APP_API_URL}/api/admin/add-student`, formD
                 <input type="email" placeholder="e.g. student@gmail.com"
                   value={inviteEmail}
                   onChange={e => setInviteEmail(e.target.value)}
-                  required autoFocus />
+                  required autoFocus
+                  style={{
+                    width:'100%', padding:'10px 14px',
+                    border:'1px solid #d1d5db', borderRadius:8,
+                    fontSize:14, outline:'none', boxSizing:'border-box'
+                  }} />
               </div>
               <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:20 }}>
                 <button type="button" onClick={() => setShowInviteModal(false)}

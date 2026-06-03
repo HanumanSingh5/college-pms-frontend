@@ -12,6 +12,7 @@ const links = [
   { path: '/admin/projects',  label: 'Projects',  icon: '📁' },
   { path: '/admin/monitor',   label: 'Monitor',   icon: '👁️' },
 ];
+
 export default function AdminFaculties() {
   const [faculties, setFaculties] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -21,9 +22,13 @@ export default function AdminFaculties() {
   const token = localStorage.getItem('token');
   const h = { headers: { Authorization: `Bearer ${token}` } };
 
-  const load = () => {
-    // Use your environment variable template literal instead
-await axios.post(`${process.env.REACT_APP_API_URL}/api/admin/add-faculty`, formData, config);
+  const load = async () => {
+    try {
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/admin/faculties`, h);
+      setFaculties(res.data);
+    } catch (err) {
+      toast.error('Failed to load faculties list');
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -47,13 +52,13 @@ await axios.post(`${process.env.REACT_APP_API_URL}/api/admin/add-faculty`, formD
     try {
       if (editing) {
         await axios.put(
-          `http://localhost:5000/api/admin/faculty/${editing._id}`,
+          `${process.env.REACT_APP_API_URL}/api/admin/faculty/${editing._id}`,
           form, h
         );
         toast.success('Faculty updated successfully!');
       } else {
         const res = await axios.post(
-          'http://localhost:5000/api/admin/faculty',
+          `${process.env.REACT_APP_API_URL}/api/admin/faculty`,
           form, h
         );
         if (res.data.emailSent) {
@@ -76,7 +81,7 @@ await axios.post(`${process.env.REACT_APP_API_URL}/api/admin/add-faculty`, formD
   const remove = async (id) => {
     if (!window.confirm('Remove this faculty member?')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/admin/faculty/${id}`, h);
+      await axios.delete(`${process.env.REACT_APP_API_URL}/api/admin/faculty/${id}`, h);
       toast.success('Faculty removed');
       load();
     } catch {

@@ -38,9 +38,8 @@ export default function AdminStudents() {
   const h = { headers: { Authorization: 'Bearer ' + token } };
 
   const load = () => {
-    axios.get('http://localhost:5000/api/admin/students', h)
-      .then(res => setStudents(res.data))
-      .catch(() => {});
+    // Use your environment variable template literal instead
+await axios.post(`${process.env.REACT_APP_API_URL}/api/admin/add-student`, formData, config);
   };
 
   useEffect(() => { load(); }, []);

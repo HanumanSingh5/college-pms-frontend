@@ -22,9 +22,8 @@ export default function AdminFaculties() {
   const h = { headers: { Authorization: `Bearer ${token}` } };
 
   const load = () => {
-    axios.get('http://localhost:5000/api/admin/faculties', h)
-      .then(res => setFaculties(res.data))
-      .catch(() => {});
+    // Use your environment variable template literal instead
+await axios.post(`${process.env.REACT_APP_API_URL}/api/admin/add-faculty`, formData, config);
   };
 
   useEffect(() => { load(); }, []);

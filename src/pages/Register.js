@@ -3,6 +3,10 @@ import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
+// VALIDATION HELPERS
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const isValidMobile = (mobile) => /^[6-9]\d{9}$/.test(mobile);
+
 export default function Register() {
   const { token }  = useParams();
   const navigate   = useNavigate();
@@ -11,13 +15,14 @@ export default function Register() {
   const [form, setForm]     = useState({
     name:         '',
     password:     '',
+    confirmPassword: '',
     enrollment:   '',
     studentClass: '',
     mobile:       '',
   });
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/api/auth/invite/${token}`)
+    axios.get(`${process.env.REACT_APP_API_URL}/api/auth/invite/${token}`)
       .then(res => {
         if (res.data.role === 'faculty') {
           setError('Faculty accounts are created by admin. Contact your administrator for login credentials.');
@@ -30,10 +35,46 @@ export default function Register() {
 
   const submit = async (e) => {
     e.preventDefault();
+
+    // Name validation
+    if (!form.name.trim())
+      return toast.error('Full name is required');
+
+    // Enrollment validation
+    if (!form.enrollment.trim())
+      return toast.error('Enrollment number is required');
+
+    // Class validation
+    if (!form.studentClass.trim())
+      return toast.error('Class is required');
+
+    // Mobile validation
+    if (!form.mobile.trim())
+      return toast.error('Mobile number is required');
+
+    if (!isValidMobile(form.mobile))
+      return toast.error('Enter a valid 10-digit Indian mobile number (must start with 6, 7, 8 or 9)');
+
+    // Password validation
+    if (!form.password)
+      return toast.error('Password is required');
+
+    if (form.password.length < 6)
+      return toast.error('Password must be at least 6 characters');
+
+    if (form.password !== form.confirmPassword)
+      return toast.error('Passwords do not match');
+
     try {
       const res = await axios.post(
-        `http://localhost:5000/api/auth/register/${token}`,
-        form
+        `${process.env.REACT_APP_API_URL}/api/auth/register/${token}`,
+        {
+          name:         form.name,
+          password:     form.password,
+          enrollment:   form.enrollment,
+          studentClass: form.studentClass,
+          mobile:       form.mobile,
+        }
       );
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('role',  res.data.role);
@@ -106,11 +147,23 @@ export default function Register() {
               </div>
 
               <div className="form-group">
-                <label>Mobile Number</label>
+                <label>Mobile Number * (10 digits)</label>
                 <input type="text" placeholder="e.g. 9876543210"
                   value={form.mobile}
-                  onChange={e => setForm({...form, mobile: e.target.value})}
-                  maxLength={10} />
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setForm({...form, mobile: val});
+                  }}
+                  maxLength={10}
+                  required
+                  style={{
+                    border: form.mobile && !isValidMobile(form.mobile) ? '1px solid #dc2626' : ''
+                  }} />
+                {form.mobile && !isValidMobile(form.mobile) && (
+                  <p style={{ color:'#dc2626', fontSize:11, margin:'3px 0 0' }}>
+                    ⚠️ Must be 10 digits starting with 6, 7, 8 or 9
+                  </p>
+                )}
               </div>
 
               <div className="form-group">
@@ -120,11 +173,27 @@ export default function Register() {
               </div>
 
               <div className="form-group">
-                <label>Password *</label>
+                <label>Password * (min 6 characters)</label>
                 <input type="password" placeholder="Create a strong password"
                   value={form.password}
                   onChange={e => setForm({...form, password: e.target.value})}
                   required />
+              </div>
+
+              <div className="form-group">
+                <label>Confirm Password *</label>
+                <input type="password" placeholder="Re-enter your password"
+                  value={form.confirmPassword}
+                  onChange={e => setForm({...form, confirmPassword: e.target.value})}
+                  required
+                  style={{
+                    border: form.confirmPassword && form.password !== form.confirmPassword ? '1px solid #dc2626' : ''
+                  }} />
+                {form.confirmPassword && form.password !== form.confirmPassword && (
+                  <p style={{ color:'#dc2626', fontSize:11, margin:'3px 0 0' }}>
+                    ⚠️ Passwords do not match
+                  </p>
+                )}
               </div>
 
               <button className="btn btn-primary"

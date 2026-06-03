@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
-import { toast } from 'react-toastify';
 
 const links = [
   { path: '/student',            label: 'Dashboard',    icon: '📊' },
@@ -19,9 +18,9 @@ export default function StudentDashboard() {
   const h = { headers: { Authorization: `Bearer ${token}` } };
 
   const load = () => {
-    axios.get('http://localhost:5000/api/student/stats',   h).then(r => setStats(r.data));
-    axios.get('http://localhost:5000/api/student/project', h).then(r => setProject(r.data));
-    axios.get('http://localhost:5000/api/student/profile', h).then(r => setProfile(r.data));
+    axios.get(`${process.env.REACT_APP_API_URL}/api/student/stats`,   h).then(r => setStats(r.data));
+    axios.get(`${process.env.REACT_APP_API_URL}/api/student/project`, h).then(r => setProject(r.data));
+    axios.get(`${process.env.REACT_APP_API_URL}/api/student/profile`, h).then(r => setProfile(r.data));
   };
 
   useEffect(() => { load(); }, []);
@@ -98,7 +97,6 @@ export default function StudentDashboard() {
               <div style={{
                 background:'white', borderRadius:12, padding:20,
                 border:'1px solid #e5e7eb', cursor:'pointer',
-                transition:'box-shadow 0.2s',
                 display:'flex', alignItems:'center', gap:16
               }}>
                 <div style={{
@@ -162,15 +160,13 @@ export default function StudentDashboard() {
                 </span>
               </div>
 
+              {/* FIXED: Only show faculty NAME, email is hidden */}
               {project.faculty && (
                 <div style={{
                   background:'#f9fafb', padding:'10px 16px',
                   borderRadius:8, marginBottom:12, fontSize:14
                 }}>
                   👨‍🏫 <strong>Faculty Guide:</strong> {project.faculty.name}
-                  <span style={{ color:'#888', marginLeft:8, fontSize:13 }}>
-                    ({project.faculty.email})
-                  </span>
                 </div>
               )}
 

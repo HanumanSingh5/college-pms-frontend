@@ -13,6 +13,10 @@ const links = [
 
 const emptyMember = { name:'', email:'', enrollment:'', mobile:'', studentClass:'' };
 
+// VALIDATION HELPERS
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const isValidMobile = (mobile) => /^[6-9]\d{9}$/.test(mobile);
+
 export default function StudentTeam() {
   const [profile, setProfile]   = useState(null);
   const [members, setMembers]   = useState([{ ...emptyMember }]);
@@ -21,7 +25,7 @@ export default function StudentTeam() {
   const h = { headers: { Authorization: `Bearer ${token}` } };
 
   const load = () => {
-    axios.get('http://localhost:5000/api/student/profile', h).then(r => {
+    axios.get(`${process.env.REACT_APP_API_URL}/api/student/profile`, h).then(r => {
       setProfile(r.data);
       if (r.data.teamMembers && r.data.teamMembers.length > 0) {
         setMembers(r.data.teamMembers);
@@ -49,15 +53,37 @@ export default function StudentTeam() {
 
   const save = async (e) => {
     e.preventDefault();
-    // Validate all members have name and enrollment
+
+    // VALIDATION for each member
     for (let i = 0; i < members.length; i++) {
-      if (!members[i].name || !members[i].enrollment) {
-        return toast.error('Member ' + (i+1) + ': Name and Enrollment are required');
-      }
+      const m = members[i];
+      const num = i + 1;
+
+      if (!m.name.trim())
+        return toast.error(`Member ${num}: Full name is required`);
+
+      if (!m.enrollment.trim())
+        return toast.error(`Member ${num}: Enrollment number is required`);
+
+      if (!m.email.trim())
+        return toast.error(`Member ${num}: Email is required`);
+
+      if (!isValidEmail(m.email))
+        return toast.error(`Member ${num}: Enter a valid email (e.g. name@gmail.com)`);
+
+      if (!m.mobile.trim())
+        return toast.error(`Member ${num}: Mobile number is required`);
+
+      if (!isValidMobile(m.mobile))
+        return toast.error(`Member ${num}: Enter a valid 10-digit Indian mobile number (starts with 6-9)`);
+
+      if (!m.studentClass.trim())
+        return toast.error(`Member ${num}: Class name is required`);
     }
+
     setSaving(true);
     try {
-      await axios.put('http://localhost:5000/api/student/profile', {
+      await axios.put(`${process.env.REACT_APP_API_URL}/api/student/profile`, {
         name:         profile.name,
         mobile:       profile.mobile,
         studentClass: profile.studentClass,
@@ -98,8 +124,7 @@ export default function StudentTeam() {
             borderRadius:10, padding:'12px 16px', marginBottom:20,
             fontSize:13, color:'#1e40af'
           }}>
-            Add all team members including yourself. Maximum 5 members per group.
-            All fields except Mobile are required.
+            ℹ️ All fields are required. Mobile must be a valid 10-digit Indian number (starts with 6, 7, 8 or 9).
           </div>
 
           <form onSubmit={save}>
@@ -169,23 +194,37 @@ export default function StudentTeam() {
                       required
                       style={{
                         width:'100%', padding:'9px 12px',
-                        border:'1px solid #d1d5db', borderRadius:8,
-                        fontSize:14, boxSizing:'border-box'
+                        border: member.email && !isValidEmail(member.email) ? '1px solid #dc2626' : '1px solid #d1d5db',
+                        borderRadius:8, fontSize:14, boxSizing:'border-box'
                       }} />
+                    {member.email && !isValidEmail(member.email) && (
+                      <p style={{ color:'#dc2626', fontSize:11, margin:'3px 0 0' }}>
+                        ⚠️ Enter valid email (e.g. name@gmail.com)
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label style={{ display:'block', marginBottom:4, fontSize:13, fontWeight:500 }}>
-                      Mobile Number
+                      Mobile Number * (10 digits)
                     </label>
                     <input type="text" placeholder="e.g. 9876543210"
                       value={member.mobile}
-                      onChange={e => updateMember(i, 'mobile', e.target.value)}
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        updateMember(i, 'mobile', val);
+                      }}
                       maxLength={10}
+                      required
                       style={{
                         width:'100%', padding:'9px 12px',
-                        border:'1px solid #d1d5db', borderRadius:8,
-                        fontSize:14, boxSizing:'border-box'
+                        border: member.mobile && !isValidMobile(member.mobile) ? '1px solid #dc2626' : '1px solid #d1d5db',
+                        borderRadius:8, fontSize:14, boxSizing:'border-box'
                       }} />
+                    {member.mobile && !isValidMobile(member.mobile) && (
+                      <p style={{ color:'#dc2626', fontSize:11, margin:'3px 0 0' }}>
+                        ⚠️ Must be 10 digits starting with 6, 7, 8 or 9
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label style={{ display:'block', marginBottom:4, fontSize:13, fontWeight:500 }}>

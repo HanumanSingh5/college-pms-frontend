@@ -4,6 +4,8 @@ import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
 import { toast } from 'react-toastify';
 
+const API = process.env.REACT_APP_API_URL;
+
 const links = [
   { path: '/student',            label: 'Dashboard',   icon: '📊' },
   { path: '/student/team',       label: 'My Team',     icon: '👥' },
@@ -27,14 +29,12 @@ export default function StudentTasks() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [currentTask, setCurrentTask]   = useState(null);
-  const token      = localStorage.getItem('token');
-  const studentId  = localStorage.getItem('id');
+  const token     = localStorage.getItem('token');
+  const studentId = localStorage.getItem('id');
   const h = { headers: { Authorization: 'Bearer ' + token } };
 
   const load = () => {
-    axios.get('http://localhost:5000/api/student/tasks', h)
-      .then(r => setTasks(r.data))
-      .catch(() => {});
+    axios.get(`${API}/api/student/tasks`, h).then(r => setTasks(r.data)).catch(() => {});
   };
 
   useEffect(() => { load(); }, []);
@@ -43,7 +43,7 @@ export default function StudentTasks() {
 
   const updateStatus = async (id, status) => {
     try {
-      await axios.put('http://localhost:5000/api/student/task/' + id + '/status', { status }, h);
+      await axios.put(`${API}/api/student/task/${id}/status`, { status }, h);
       toast.success('Status updated!');
       load();
     } catch { toast.error('Failed to update status'); }
@@ -65,7 +65,7 @@ export default function StudentTasks() {
     formData.append('comment', comment);
     try {
       const res = await axios.post(
-        'http://localhost:5000/api/student/task/' + currentTask._id + '/upload',
+        `${API}/api/student/task/${currentTask._id}/upload`,
         formData,
         { headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'multipart/form-data' } }
       );
@@ -94,7 +94,6 @@ export default function StudentTasks() {
     late:          'badge-danger',
   };
 
-  // Group by phase
   const grouped = {};
   PHASES.forEach(p => { grouped[p.value] = []; });
   tasks.forEach(t => {
@@ -107,30 +106,17 @@ export default function StudentTasks() {
   });
 
   const canUpload = (task) => {
-    // Already submitted
-    const mySubmission = task.submissions?.find(
-      s => s.student?._id === studentId || s.student === studentId
-    );
+    const mySubmission = task.submissions?.find(s => s.student?._id===studentId || s.student===studentId);
     if (mySubmission) return false;
-
-    // Upload disabled by faculty/admin
     if (!task.uploadEnabled) return false;
-
     return true;
   };
 
   const getUploadBlockReason = (task) => {
-    const mySubmission = task.submissions?.find(
-      s => s.student?._id === studentId || s.student === studentId
-    );
-    if (mySubmission) return null; // already submitted, no block message needed
-
-    if (!task.uploadEnabled && isOverdue(task.dueDate)) {
-      return 'blocked'; // blocked due to overdue
-    }
-    if (!task.uploadEnabled) {
-      return 'disabled'; // manually disabled
-    }
+    const mySubmission = task.submissions?.find(s => s.student?._id===studentId || s.student===studentId);
+    if (mySubmission) return null;
+    if (!task.uploadEnabled && isOverdue(task.dueDate)) return 'blocked';
+    if (!task.uploadEnabled) return 'disabled';
     return null;
   };
 
@@ -142,7 +128,7 @@ export default function StudentTasks() {
         <div className="main-content">
           <h2 style={{ marginBottom:20 }}>My Tasks</h2>
 
-          {tasks.length === 0 && (
+          {tasks.length===0 && (
             <div className="card" style={{ textAlign:'center', color:'#888', padding:40 }}>
               <div style={{ fontSize:48, marginBottom:12 }}>📋</div>
               <h3>No Tasks Assigned Yet</h3>
@@ -155,107 +141,61 @@ export default function StudentTasks() {
             if (phaseTasks.length === 0) return null;
             return (
               <div key={phase.value} style={{ marginBottom:28 }}>
-                <div style={{
-                  display:'flex', alignItems:'center', gap:10, marginBottom:12,
-                  padding:'8px 16px', background:'#f0f4ff', borderRadius:8,
-                  borderLeft:'4px solid #4f46e5'
-                }}>
+                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12, padding:'8px 16px', background:'#f0f4ff', borderRadius:8, borderLeft:'4px solid #4f46e5' }}>
                   <h3 style={{ margin:0, color:'#4f46e5', fontSize:15 }}>{phase.label}</h3>
-                  <span style={{ background:'#4f46e5', color:'white', padding:'2px 8px', borderRadius:20, fontSize:12 }}>
-                    {phaseTasks.length} task(s)
-                  </span>
+                  <span style={{ background:'#4f46e5', color:'white', padding:'2px 8px', borderRadius:20, fontSize:12 }}>{phaseTasks.length} task(s)</span>
                 </div>
 
                 {phaseTasks.map(t => {
-                  const mySubmission = t.submissions?.find(
-                    s => s.student?._id === studentId || s.student === studentId
-                  );
-                  const overdue       = isOverdue(t.dueDate);
-                  const blockReason   = getUploadBlockReason(t);
+                  const mySubmission = t.submissions?.find(s => s.student?._id===studentId || s.student===studentId);
+                  const overdue      = isOverdue(t.dueDate);
+                  const blockReason  = getUploadBlockReason(t);
                   const uploadAllowed = canUpload(t);
 
                   return (
                     <div key={t._id} className="card" style={{
                       marginBottom:12,
-                      borderLeft: t.status === 'late' ? '4px solid #ef4444' :
-                                  t.status === 'completed' ? '4px solid #16a34a' :
-                                  overdue ? '4px solid #f97316' : '4px solid #e5e7eb'
+                      borderLeft: t.status==='late'?'4px solid #ef4444': t.status==='completed'?'4px solid #16a34a': overdue?'4px solid #f97316':'4px solid #e5e7eb'
                     }}>
                       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
                         <div style={{ flex:1 }}>
                           <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6, flexWrap:'wrap' }}>
                             <h4 style={{ margin:0 }}>{t.title}</h4>
-                            <span className={'badge ' + (statusColor[t.status] || 'badge-warning')}>
-                              {t.status === 'late' ? '⚠️ Late' : t.status}
-                            </span>
-                            {overdue && t.status !== 'completed' && (
-                              <span style={{ background:'#fee2e2', color:'#dc2626', padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:600 }}>
-                                OVERDUE
-                              </span>
-                            )}
-                            {!t.uploadEnabled && !mySubmission && (
-                              <span style={{ background:'#fef3c7', color:'#92400e', padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:600 }}>
-                                🔒 UPLOAD BLOCKED
-                              </span>
-                            )}
+                            <span className={'badge '+(statusColor[t.status]||'badge-warning')}>{t.status==='late'?'⚠️ Late':t.status}</span>
+                            {overdue&&t.status!=='completed'&&<span style={{ background:'#fee2e2', color:'#dc2626', padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:600 }}>OVERDUE</span>}
+                            {!t.uploadEnabled&&!mySubmission&&<span style={{ background:'#fef3c7', color:'#92400e', padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:600 }}>🔒 UPLOAD BLOCKED</span>}
                           </div>
 
                           <p style={{ color:'#666', fontSize:13, marginBottom:8 }}>{t.description}</p>
 
                           <div style={{ display:'flex', gap:16, fontSize:12, color:'#888', flexWrap:'wrap' }}>
-                            <span style={{
-                              color: overdue && t.status !== 'completed' ? '#dc2626' : '#888',
-                              fontWeight: overdue && t.status !== 'completed' ? 600 : 400
-                            }}>
-                              📅 Due: {t.dueDate ? new Date(t.dueDate).toLocaleDateString() : 'No date'}
-                              {overdue && t.status !== 'completed' && ' ⚠️'}
+                            <span style={{ color:overdue&&t.status!=='completed'?'#dc2626':'#888', fontWeight:overdue&&t.status!=='completed'?600:400 }}>
+                              📅 Due: {t.dueDate?new Date(t.dueDate).toLocaleDateString():'No date'}{overdue&&t.status!=='completed'&&' ⚠️'}
                             </span>
                             <span>👨‍🏫 {t.assignedBy?.name}</span>
                             <span>📁 {t.project?.title}</span>
                           </div>
 
-                          {/* Upload blocked warning */}
-                          {blockReason === 'blocked' && (
-                            <div style={{
-                              background:'#fef3c7', border:'1px solid #fcd34d',
-                              borderRadius:8, padding:'10px 14px', marginTop:10,
-                              fontSize:13, color:'#92400e'
-                            }}>
-                              🔒 <strong>Upload Blocked:</strong> This task is past its due date.
-                              Your faculty or admin needs to enable upload before you can submit.
-                              Please contact your faculty guide.
+                          {blockReason==='blocked'&&(
+                            <div style={{ background:'#fef3c7', border:'1px solid #fcd34d', borderRadius:8, padding:'10px 14px', marginTop:10, fontSize:13, color:'#92400e' }}>
+                              🔒 <strong>Upload Blocked:</strong> This task is past its due date. Your faculty or admin needs to enable upload before you can submit.
                             </div>
                           )}
-                          {blockReason === 'disabled' && (
-                            <div style={{
-                              background:'#fee2e2', border:'1px solid #fca5a5',
-                              borderRadius:8, padding:'10px 14px', marginTop:10,
-                              fontSize:13, color:'#dc2626'
-                            }}>
-                              🔒 <strong>Upload Disabled:</strong> Your faculty or admin has disabled
-                              upload for this task. Contact your faculty guide.
+                          {blockReason==='disabled'&&(
+                            <div style={{ background:'#fee2e2', border:'1px solid #fca5a5', borderRadius:8, padding:'10px 14px', marginTop:10, fontSize:13, color:'#dc2626' }}>
+                              🔒 <strong>Upload Disabled:</strong> Your faculty or admin has disabled upload for this task.
                             </div>
                           )}
 
-                          {/* My submission */}
-                          {mySubmission && (
-                            <div style={{
-                              background:'#f0fdf4', border:'1px solid #bbf7d0',
-                              borderRadius:8, padding:'10px 14px', marginTop:10, fontSize:13
-                            }}>
+                          {mySubmission&&(
+                            <div style={{ background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:8, padding:'10px 14px', marginTop:10, fontSize:13 }}>
                               <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
                                 <strong style={{ color:'#16a34a' }}>✅ Submitted</strong>
-                                {mySubmission.isLate && (
-                                  <span className="badge badge-danger">Late Submission</span>
-                                )}
-                                <span style={{ color:'#888' }}>
-                                  on {new Date(mySubmission.submittedAt).toLocaleDateString()}
-                                </span>
+                                {mySubmission.isLate&&<span className="badge badge-danger">Late Submission</span>}
+                                <span style={{ color:'#888' }}>on {new Date(mySubmission.submittedAt).toLocaleDateString()}</span>
                               </div>
-                              {mySubmission.comment && (
-                                <p style={{ margin:'4px 0', color:'#555' }}>{mySubmission.comment}</p>
-                              )}
-                              <a href={'http://localhost:5000/uploads/' + mySubmission.document}
+                              {mySubmission.comment&&<p style={{ margin:'4px 0', color:'#555' }}>{mySubmission.comment}</p>}
+                              <a href={mySubmission.fileUrl || `${API}/uploads/${mySubmission.document}`}
                                 target="_blank" rel="noreferrer"
                                 style={{ color:'#4f46e5', fontSize:12 }}>
                                 📄 View my submission
@@ -264,32 +204,15 @@ export default function StudentTasks() {
                           )}
                         </div>
 
-                        {/* Action buttons */}
                         <div style={{ display:'flex', flexDirection:'column', gap:8, marginLeft:16 }}>
-                          {t.status === 'pending' && !overdue && (
-                            <button type="button" className="btn btn-warning"
-                              onClick={() => updateStatus(t._id, 'in-progress')}
-                              style={{ fontSize:12, padding:'6px 12px' }}>
-                              ▶ Start
-                            </button>
+                          {t.status==='pending'&&!overdue&&(
+                            <button type="button" className="btn btn-warning" onClick={() => updateStatus(t._id,'in-progress')} style={{ fontSize:12, padding:'6px 12px' }}>▶ Start</button>
                           )}
-                          {uploadAllowed && (
-                            <button type="button" className="btn btn-primary"
-                              onClick={() => openUpload(t)}
-                              disabled={uploadingId === t._id}
-                              style={{ fontSize:12, padding:'6px 12px' }}>
-                              📤 Submit
-                            </button>
+                          {uploadAllowed&&(
+                            <button type="button" className="btn btn-primary" onClick={() => openUpload(t)} disabled={uploadingId===t._id} style={{ fontSize:12, padding:'6px 12px' }}>📤 Submit</button>
                           )}
-                          {!uploadAllowed && !mySubmission && blockReason && (
-                            <div style={{
-                              background:'#f3f4f6', border:'1px solid #e5e7eb',
-                              borderRadius:8, padding:'8px 12px',
-                              fontSize:11, color:'#6b7280', textAlign:'center',
-                              maxWidth:100
-                            }}>
-                              🔒 Blocked
-                            </div>
+                          {!uploadAllowed&&!mySubmission&&blockReason&&(
+                            <div style={{ background:'#f3f4f6', border:'1px solid #e5e7eb', borderRadius:8, padding:'8px 12px', fontSize:11, color:'#6b7280', textAlign:'center', maxWidth:100 }}>🔒 Blocked</div>
                           )}
                         </div>
                       </div>
@@ -303,42 +226,30 @@ export default function StudentTasks() {
         </div>
       </div>
 
-      {/* Upload Modal */}
       {showUploadModal && currentTask && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
           <div style={{ background:'white', borderRadius:16, padding:32, width:'100%', maxWidth:480, boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
             <h3 style={{ marginBottom:8 }}>📤 Submit Task</h3>
             <p style={{ color:'#888', fontSize:13, marginBottom:20 }}>{currentTask.title}</p>
-
-            {isOverdue(currentTask.dueDate) && (
+            {isOverdue(currentTask.dueDate)&&(
               <div style={{ background:'#fef3c7', border:'1px solid #fcd34d', borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#92400e' }}>
                 ⚠️ This task is past due date. It will be marked as a <strong>late submission</strong>.
               </div>
             )}
-
             <form onSubmit={submitUpload}>
               <div className="form-group">
                 <label>Upload Document *</label>
-                <input type="file"
-                  accept=".pdf,.doc,.docx,.xlsx,.xls,.ppt,.pptx,.zip,.txt"
-                  onChange={e => setSelectedFile(e.target.files[0])}
-                  required
-                  style={{ width:'100%', padding:'10px 14px', border:'2px dashed #c7d2fe', borderRadius:8, fontSize:14, cursor:'pointer', boxSizing:'border-box' }} />
+                <input type="file" accept=".pdf,.doc,.docx,.xlsx,.xls,.ppt,.pptx,.zip,.txt" onChange={e => setSelectedFile(e.target.files[0])} required style={{ width:'100%', padding:'10px 14px', border:'2px dashed #c7d2fe', borderRadius:8, fontSize:14, cursor:'pointer', boxSizing:'border-box' }} />
                 <small style={{ color:'#888', fontSize:12 }}>PDF, Word, Excel, PPT, ZIP accepted</small>
               </div>
               <div className="form-group">
                 <label>Comment (optional)</label>
-                <textarea rows="3" placeholder="Add notes about your submission..."
-                  value={comment} onChange={e => setComment(e.target.value)}
-                  style={{ width:'100%', padding:'10px 14px', borderRadius:8, border:'1px solid #d1d5db', fontSize:14 }} />
+                <textarea rows="3" placeholder="Add notes about your submission..." value={comment} onChange={e => setComment(e.target.value)} style={{ width:'100%', padding:'10px 14px', borderRadius:8, border:'1px solid #d1d5db', fontSize:14 }} />
               </div>
               <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:16 }}>
-                <button type="button" className="btn"
-                  onClick={() => setShowUploadModal(false)}
-                  style={{ background:'#e5e7eb' }}>Cancel</button>
-                <button type="submit" className="btn btn-primary"
-                  disabled={uploadingId === currentTask._id}>
-                  {uploadingId === currentTask._id ? 'Uploading...' : '📤 Submit Task'}
+                <button type="button" className="btn" onClick={() => setShowUploadModal(false)} style={{ background:'#e5e7eb' }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={uploadingId===currentTask._id}>
+                  {uploadingId===currentTask._id?'Uploading...':'📤 Submit Task'}
                 </button>
               </div>
             </form>

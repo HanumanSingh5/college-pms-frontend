@@ -3,6 +3,8 @@ import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
 
+const API = process.env.REACT_APP_API_URL;
+
 const links = [
   { path: '/admin',           label: 'Dashboard', icon: '📊' },
   { path: '/admin/faculties', label: 'Faculties', icon: '👨‍🏫' },
@@ -20,8 +22,8 @@ export default function AdminDashboard() {
   const h = { headers: { Authorization: `Bearer ${token}` } };
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/admin/stats',    h).then(r => setStats(r.data));
-    axios.get('http://localhost:5000/api/admin/projects', h).then(r => setProjects(r.data));
+    axios.get(`${API}/api/admin/stats`,    h).then(r => setStats(r.data));
+    axios.get(`${API}/api/admin/projects`, h).then(r => setProjects(r.data));
   }, []);
 
   const tabStyle = (t) => ({
@@ -32,7 +34,6 @@ export default function AdminDashboard() {
     color: tab === t ? '#4f46e5' : '#666', fontSize: 14,
   });
 
-  // Projects with student submitted definitions
   const withDefinitions = projects.filter(p => p.definition);
 
   return (
@@ -42,7 +43,6 @@ export default function AdminDashboard() {
         <Sidebar links={links} />
         <div className="main-content">
 
-          {/* Stats */}
           <div className="stats-grid" style={{ marginBottom:24 }}>
             <div className="stat-card"><h3>{stats.faculties}</h3><p>Total Faculties</p></div>
             <div className="stat-card"><h3>{stats.students}</h3><p>Total Students</p></div>
@@ -50,7 +50,6 @@ export default function AdminDashboard() {
             <div className="stat-card"><h3>{stats.tasks}</h3><p>Total Tasks</p></div>
           </div>
 
-          {/* Tabs */}
           <div style={{ borderBottom:'1px solid #e5e7eb', marginBottom:20, display:'flex', gap:4 }}>
             <button style={tabStyle('overview')} onClick={() => setTab('overview')}>
               📊 Overview
@@ -69,7 +68,6 @@ export default function AdminDashboard() {
             </button>
           </div>
 
-          {/* Tab: Overview */}
           {tab === 'overview' && (
             <div>
               <h3 style={{ marginBottom:16 }}>Recent Projects</h3>
@@ -117,7 +115,6 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Tab: Student Definitions */}
           {tab === 'definitions' && (
             <div>
               <p style={{ color:'#888', fontSize:14, marginBottom:16 }}>
@@ -159,7 +156,6 @@ export default function AdminDashboard() {
                     </span>
                   </div>
 
-                  {/* Tech Stack */}
                   <div style={{ display:'flex', gap:8, marginBottom:12 }}>
                     {p.frontend && (
                       <span style={{
@@ -179,7 +175,6 @@ export default function AdminDashboard() {
                     )}
                   </div>
 
-                  {/* Student Definition */}
                   <div style={{
                     background:'#f9fafb', border:'1px solid #e5e7eb',
                     borderRadius:8, padding:'14px 16px', marginBottom:12
@@ -192,7 +187,6 @@ export default function AdminDashboard() {
                     </p>
                   </div>
 
-                  {/* Final Definition if set */}
                   {p.finalDefinition && (
                     <div style={{
                       background:'#f0fdf4', border:'1px solid #bbf7d0',
@@ -207,7 +201,6 @@ export default function AdminDashboard() {
                     </div>
                   )}
 
-                  {/* Students in this group */}
                   <div style={{ marginTop:12 }}>
                     <strong style={{ fontSize:13, color:'#555' }}>👥 Students:</strong>
                     <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:6 }}>

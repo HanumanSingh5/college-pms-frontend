@@ -4,6 +4,8 @@ import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
 import { toast } from 'react-toastify';
 
+const API = process.env.REACT_APP_API_URL;
+
 const links = [
   { path: '/admin',           label: 'Dashboard', icon: '📊' },
   { path: '/admin/faculties', label: 'Faculties', icon: '👨‍🏫' },
@@ -22,13 +24,10 @@ export default function AdminFaculties() {
   const token = localStorage.getItem('token');
   const h = { headers: { Authorization: `Bearer ${token}` } };
 
-  const load = async () => {
-    try {
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/admin/faculties`, h);
-      setFaculties(res.data);
-    } catch (err) {
-      toast.error('Failed to load faculties list');
-    }
+  const load = () => {
+    axios.get(`${API}/api/admin/faculties`, h)
+      .then(res => setFaculties(res.data))
+      .catch(() => {});
   };
 
   useEffect(() => { load(); }, []);
@@ -51,16 +50,10 @@ export default function AdminFaculties() {
     setLoading(true);
     try {
       if (editing) {
-        await axios.put(
-          `${process.env.REACT_APP_API_URL}/api/admin/faculty/${editing._id}`,
-          form, h
-        );
+        await axios.put(`${API}/api/admin/faculty/${editing._id}`, form, h);
         toast.success('Faculty updated successfully!');
       } else {
-        const res = await axios.post(
-          `${process.env.REACT_APP_API_URL}/api/admin/faculty`,
-          form, h
-        );
+        const res = await axios.post(`${API}/api/admin/faculty`, form, h);
         if (res.data.emailSent) {
           toast.success(`✅ Faculty created! Credentials emailed to ${form.email}`);
         } else {
@@ -81,7 +74,7 @@ export default function AdminFaculties() {
   const remove = async (id) => {
     if (!window.confirm('Remove this faculty member?')) return;
     try {
-      await axios.delete(`${process.env.REACT_APP_API_URL}/api/admin/faculty/${id}`, h);
+      await axios.delete(`${API}/api/admin/faculty/${id}`, h);
       toast.success('Faculty removed');
       load();
     } catch {

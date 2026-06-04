@@ -4,6 +4,8 @@ import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
 import { toast } from 'react-toastify';
 
+const API = process.env.REACT_APP_API_URL;
+
 const links = [
   { path: '/admin',           label: 'Dashboard', icon: '📊' },
   { path: '/admin/faculties', label: 'Faculties', icon: '👨‍🏫' },
@@ -37,13 +39,12 @@ export default function AdminStudents() {
   const token = localStorage.getItem('token');
   const h = { headers: { Authorization: 'Bearer ' + token } };
 
-  const load = async () => {
-    try {
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/admin/students`, h);
-      setStudents(res.data);
-    } catch (err) {
-      toast.error('Failed to load students list');
-    }
+  const LIVE_URL = 'https://college-pms-frontend.vercel.app';
+
+  const load = () => {
+    axios.get(`${API}/api/admin/students`, h)
+      .then(res => setStudents(res.data))
+      .catch(() => {});
   };
 
   useEffect(() => { load(); }, []);
@@ -53,10 +54,14 @@ export default function AdminStudents() {
     setLoading(true);
     try {
       const res = await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/admin/invite-student`,
+        `${API}/api/admin/invite-student`,
         { email: inviteEmail }, h
       );
-      setInviteLink(res.data.link);
+      // Replace localhost in the returned link with the live URL
+      const fixedLink = res.data.link
+        ? res.data.link.replace('http://localhost:3000', LIVE_URL)
+        : res.data.link;
+      setInviteLink(fixedLink);
       setShowInviteModal(false);
       setShowLinkModal(true);
       setInviteEmail('');
@@ -75,10 +80,23 @@ export default function AdminStudents() {
       const formData = new FormData();
       formData.append('file', excelFile);
       const res = await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/admin/upload-students-excel`,
+        `${API}/api/admin/upload-students-excel`,
         formData,
         { headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'multipart/form-data' } }
       );
+      // Fix localhost links in results
+      if (res.data.results?.success) {
+        res.data.results.success = res.data.results.success.map(item => ({
+          ...item,
+          link: item.link ? item.link.replace('http://localhost:3000', LIVE_URL) : item.link
+        }));
+      }
+      if (res.data.results?.alreadyInvited) {
+        res.data.results.alreadyInvited = res.data.results.alreadyInvited.map(item => ({
+          ...item,
+          link: item.link ? item.link.replace('http://localhost:3000', LIVE_URL) : item.link
+        }));
+      }
       setUploadResults(res.data.results);
       setShowExcelModal(false);
       setShowResultModal(true);
@@ -113,10 +131,7 @@ export default function AdminStudents() {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.put(
-        `${process.env.REACT_APP_API_URL}/api/admin/student/` + editing._id,
-        editForm, h
-      );
+      await axios.put(`${API}/api/admin/student/${editing._id}`, editForm, h);
       toast.success('Student updated!');
       setShowEditModal(false);
       load();
@@ -141,7 +156,7 @@ export default function AdminStudents() {
     setResetLoading(true);
     try {
       await axios.put(
-        `${process.env.REACT_APP_API_URL}/api/admin/student/` + resetStudent._id,
+        `${API}/api/admin/student/${resetStudent._id}`,
         {
           name:       resetStudent.name,
           email:      resetStudent.email,
@@ -163,7 +178,7 @@ export default function AdminStudents() {
   const remove = async (id) => {
     if (!window.confirm('Remove this student?')) return;
     try {
-      await axios.delete(`${process.env.REACT_APP_API_URL}/api/admin/student/` + id, h);
+      await axios.delete(`${API}/api/admin/student/${id}`, h);
       toast.success('Student removed');
       load();
     } catch {
@@ -368,13 +383,29 @@ export default function AdminStudents() {
                       <tr>
                         <td style={{ padding:'4px 0', color:'#555' }}>Login URL:</td>
                         <td style={{ padding:'4px 0' }}>
-                          <span style={{ color:'#4f46e5', fontSize:12 }}>
-                            On Live App Login Page
-                          </span>
+                          <a href={LIVE_URL + '/login'}
+                            style={{ color:'#4f46e5', fontSize:12 }}>
+                            {LIVE_URL}/login
+                          </a>
                         </td>
                       </tr>
                     </tbody>
                   </table>
+                  <button type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        'Login URL: ' + LIVE_URL + '/login\nEmail: ' + resetStudent.email + '\nPassword: ' + newPassword
+                      );
+                      toast.success('Credentials copied!');
+                    }}
+                    style={{
+                      marginTop:10, padding:'6px 14px',
+                      background:'#4f46e5', color:'white',
+                      border:'none', borderRadius:6,
+                      cursor:'pointer', fontSize:12, fontWeight:600
+                    }}>
+                    📋 Copy Credentials
+                  </button>
                 </div>
               )}
 
@@ -416,12 +447,7 @@ export default function AdminStudents() {
                 <input type="email" placeholder="e.g. student@gmail.com"
                   value={inviteEmail}
                   onChange={e => setInviteEmail(e.target.value)}
-                  required autoFocus
-                  style={{
-                    width:'100%', padding:'10px 14px',
-                    border:'1px solid #d1d5db', borderRadius:8,
-                    fontSize:14, outline:'none', boxSizing:'border-box'
-                  }} />
+                  required autoFocus />
               </div>
               <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:20 }}>
                 <button type="button" onClick={() => setShowInviteModal(false)}

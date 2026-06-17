@@ -49,13 +49,12 @@ export default function AdminStudents() {
 
   useEffect(() => { load(); }, []);
 
-  const generateInvite = async (e) => {
-    e.preventDefault();
+  const generateInvite = async () => {
     setLoading(true);
     try {
       const res = await axios.post(
         `${API}/api/admin/invite-student`,
-        { email: inviteEmail }, h
+        h
       );
       // Replace localhost in the returned link with the live URL
       const fixedLink = res.data.link
@@ -219,8 +218,8 @@ export default function AdminStudents() {
             borderRadius:10, padding:'12px 18px', marginBottom:16,
             fontSize:13, color:'#1e40af', lineHeight:1.7
           }}>
-            <strong>Student Registration:</strong> Send invite link → Student registers with their own password →
-            If student forgets password, use <strong>Reset Password</strong> button below.
+            <strong>Student Registration:</strong> Generate a link → Share it with student manually → Student opens link and fills their own email, name, enrollment &amp; sets password.
+            If student forgets password, use <strong>🔑 Password</strong> button below.
           </div>
 
           <input type="text"
@@ -437,28 +436,20 @@ export default function AdminStudents() {
       {showInviteModal && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
           <div style={{ background:'white', borderRadius:16, padding:32, width:'100%', maxWidth:440, boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
-            <h3 style={{ marginBottom:8 }}>Send Registration Link</h3>
+            <h3 style={{ marginBottom:8 }}>Generate Registration Link</h3>
             <p style={{ color:'#666', fontSize:14, marginBottom:20 }}>
-              Enter the student's email. A unique registration link will be generated.
+              A unique one-time registration link will be generated. Share it with the student — they will enter their own email and details.
             </p>
-            <form onSubmit={generateInvite}>
-              <div className="form-group">
-                <label>Student Email Address</label>
-                <input type="email" placeholder="e.g. student@gmail.com"
-                  value={inviteEmail}
-                  onChange={e => setInviteEmail(e.target.value)}
-                  required autoFocus />
-              </div>
-              <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:20 }}>
-                <button type="button" onClick={() => setShowInviteModal(false)}
-                  style={{ padding:'10px 20px', borderRadius:8, border:'none', background:'#e5e7eb', cursor:'pointer' }}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={loading}>
-                  {loading ? 'Generating...' : 'Generate Link'}
-                </button>
-              </div>
-            </form>
+            <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:20 }}>
+              <button type="button" onClick={() => setShowInviteModal(false)}
+                style={{ padding:'10px 20px', borderRadius:8, border:'none', background:'#e5e7eb', cursor:'pointer' }}>
+                Cancel
+              </button>
+              <button type="button" className="btn btn-primary" disabled={loading}
+                onClick={generateInvite}>
+                {loading ? 'Generating...' : 'Generate Link'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -472,7 +463,7 @@ export default function AdminStudents() {
               <h3>Registration Link Generated!</h3>
             </div>
             <div style={{ background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:10, padding:'12px 16px', marginBottom:12, fontSize:13, color:'#1e40af' }}>
-              Student clicks this link → fills Name, Enrollment, Class → sets their own password → logged in automatically.
+              Student opens this link → enters their own Email, Name, Enrollment, Class → sets their own password → logged in automatically.
             </div>
             <div style={{ background:'#f0f4ff', border:'1px solid #c7d2fe', borderRadius:10, padding:'14px 16px', marginBottom:12, wordBreak:'break-all', fontSize:13, color:'#4f46e5' }}>
               {inviteLink}
@@ -499,7 +490,7 @@ export default function AdminStudents() {
           <div style={{ background:'white', borderRadius:16, padding:32, width:'100%', maxWidth:520, boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
             <h3 style={{ marginBottom:8 }}>Upload Excel & Send Registration Emails</h3>
             <p style={{ color:'#666', fontSize:14, marginBottom:16 }}>
-              Upload Excel file with student emails. Registration links will be sent automatically.
+              Upload Excel file with student names. Registration links will be generated for each row — share them with students manually.
             </p>
             <div style={{ background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:10, padding:16, marginBottom:16 }}>
               <strong style={{ fontSize:13, display:'block', marginBottom:8 }}>Required Excel format:</strong>
@@ -507,17 +498,14 @@ export default function AdminStudents() {
                 <thead>
                   <tr style={{ background:'#4f46e5', color:'white' }}>
                     <th style={{ padding:'6px 12px' }}>Name</th>
-                    <th style={{ padding:'6px 12px' }}>Email</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr style={{ background:'#f0f4ff' }}>
                     <td style={{ padding:'6px 12px', border:'1px solid #e5e7eb' }}>Raj Patel</td>
-                    <td style={{ padding:'6px 12px', border:'1px solid #e5e7eb' }}>raj@gmail.com</td>
                   </tr>
                   <tr>
                     <td style={{ padding:'6px 12px', border:'1px solid #e5e7eb' }}>Priya Shah</td>
-                    <td style={{ padding:'6px 12px', border:'1px solid #e5e7eb' }}>priya@gmail.com</td>
                   </tr>
                 </tbody>
               </table>
@@ -532,14 +520,14 @@ export default function AdminStudents() {
                 {excelFile && <p style={{ margin:'6px 0 0', fontSize:13, color:'#4f46e5' }}>Selected: {excelFile.name}</p>}
               </div>
               <div style={{ background:'#fef9c3', borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#854d0e' }}>
-                Already registered or already invited emails will be skipped automatically.
+                One registration link will be generated per row. Each link is single-use.
               </div>
               <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
                 <button type="button" onClick={() => setShowExcelModal(false)}
                   style={{ padding:'10px 20px', borderRadius:8, border:'none', background:'#e5e7eb', cursor:'pointer' }}
                   disabled={loading}>Cancel</button>
                 <button type="submit" className="btn btn-success" disabled={loading}>
-                  {loading ? 'Processing...' : '📊 Upload & Send'}
+                  {loading ? 'Processing...' : '📊 Upload & Generate Links'}
                 </button>
               </div>
             </form>
@@ -581,7 +569,7 @@ export default function AdminStudents() {
                     <div key={i} style={{ padding:'3px 0', borderBottom:'1px solid #dcfce7' }}>
                       {item.name && <strong>{item.name} — </strong>}{item.email}
                       <span style={{ float:'right', color: item.emailSent ? '#16a34a' : '#dc2626' }}>
-                        {item.emailSent ? '📧 Sent' : '⚠️ Link only'}
+                        {'🔗 Link ready'}
                       </span>
                     </div>
                   ))}

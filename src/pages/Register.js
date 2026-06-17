@@ -3,22 +3,22 @@ import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
-// VALIDATION HELPERS
-const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const isValidEmail  = (email)  => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const isValidMobile = (mobile) => /^[6-9]\d{9}$/.test(mobile);
 
 export default function Register() {
-  const { token }  = useParams();
-  const navigate   = useNavigate();
-  const [invite, setInvite] = useState(null);
+  const { token } = useParams();
+  const navigate  = useNavigate();
+  const [valid, setValid]   = useState(false);
   const [error, setError]   = useState('');
   const [form, setForm]     = useState({
-    name:         '',
-    password:     '',
+    name:            '',
+    email:           '',
+    password:        '',
     confirmPassword: '',
-    enrollment:   '',
-    studentClass: '',
-    mobile:       '',
+    enrollment:      '',
+    studentClass:    '',
+    mobile:          '',
   });
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export default function Register() {
           setError('Faculty accounts are created by admin. Contact your administrator for login credentials.');
           return;
         }
-        setInvite(res.data);
+        setValid(true);
       })
       .catch(() => setError('Invalid or expired registration link.'));
   }, [token]);
@@ -36,26 +36,24 @@ export default function Register() {
   const submit = async (e) => {
     e.preventDefault();
 
-    // Name validation
     if (!form.name.trim())
       return toast.error('Full name is required');
 
-    // Enrollment validation
+    if (!form.email.trim() || !isValidEmail(form.email))
+      return toast.error('Enter a valid email address');
+
     if (!form.enrollment.trim())
       return toast.error('Enrollment number is required');
 
-    // Class validation
     if (!form.studentClass.trim())
       return toast.error('Class is required');
 
-    // Mobile validation
     if (!form.mobile.trim())
       return toast.error('Mobile number is required');
 
     if (!isValidMobile(form.mobile))
-      return toast.error('Enter a valid 10-digit Indian mobile number (must start with 6, 7, 8 or 9)');
+      return toast.error('Enter a valid 10-digit mobile number (must start with 6, 7, 8 or 9)');
 
-    // Password validation
     if (!form.password)
       return toast.error('Password is required');
 
@@ -70,6 +68,7 @@ export default function Register() {
         `${process.env.REACT_APP_API_URL}/api/auth/register/${token}`,
         {
           name:         form.name,
+          email:        form.email,
           password:     form.password,
           enrollment:   form.enrollment,
           studentClass: form.studentClass,
@@ -89,125 +88,116 @@ export default function Register() {
 
   return (
     <div className="login-page">
-      <div className="login-box" style={{ maxWidth:460 }}>
+      <div className="login-box" style={{ maxWidth: 460 }}>
         <h2>🎓 Student Registration</h2>
-        <p style={{ textAlign:'center', color:'#888', marginBottom:20 }}>
+        <p style={{ textAlign: 'center', color: '#888', marginBottom: 20 }}>
           College Project Management System
         </p>
 
         {error && (
-          <div style={{
-            background:'#fee2e2', color:'#dc2626',
-            padding:'12px 16px', borderRadius:8,
-            marginBottom:16, fontSize:14, textAlign:'center'
-          }}>
+          <div style={{ background: '#fee2e2', color: '#dc2626', padding: '12px 16px', borderRadius: 8, marginBottom: 16, fontSize: 14, textAlign: 'center' }}>
             ⚠️ {error}
           </div>
         )}
 
-        {!error && !invite && (
-          <p style={{ textAlign:'center', color:'#888' }}>
-            Verifying your invite link...
+        {!error && !valid && (
+          <p style={{ textAlign: 'center', color: '#888' }}>
+            Verifying your registration link...
           </p>
         )}
 
-        {invite && (
-          <>
-            <div style={{
-              background:'#f0fdf4', color:'#16a34a',
-              padding:'10px 14px', borderRadius:8,
-              marginBottom:20, fontSize:13, textAlign:'center'
-            }}>
-              ✅ Registering as Student — {invite.email}
+        {valid && (
+          <form onSubmit={submit}>
+
+            <div className="form-group">
+              <label>Full Name *</label>
+              <input type="text" placeholder="Enter your full name"
+                value={form.name}
+                onChange={e => setForm({ ...form, name: e.target.value })}
+                required />
             </div>
 
-            <form onSubmit={submit}>
-              <div className="form-group">
-                <label>Full Name *</label>
-                <input type="text" placeholder="Enter your full name"
-                  value={form.name}
-                  onChange={e => setForm({...form, name: e.target.value})}
-                  required />
-              </div>
+            <div className="form-group">
+              <label>Email Address *</label>
+              <input type="email" placeholder="Enter your email address"
+                value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
+                required
+                style={{ border: form.email && !isValidEmail(form.email) ? '1px solid #dc2626' : '' }} />
+              {form.email && !isValidEmail(form.email) && (
+                <p style={{ color: '#dc2626', fontSize: 11, margin: '3px 0 0' }}>
+                  ⚠️ Enter a valid email address
+                </p>
+              )}
+            </div>
 
-              <div className="form-group">
-                <label>Enrollment Number *</label>
-                <input type="text" placeholder="e.g. 21CS001"
-                  value={form.enrollment}
-                  onChange={e => setForm({...form, enrollment: e.target.value})}
-                  required />
-              </div>
+            <div className="form-group">
+              <label>Enrollment Number *</label>
+              <input type="text" placeholder="e.g. 21CS001"
+                value={form.enrollment}
+                onChange={e => setForm({ ...form, enrollment: e.target.value })}
+                required />
+            </div>
 
-              <div className="form-group">
-                <label>Class *</label>
-                <input type="text" placeholder="e.g. TY-B, SY-A"
-                  value={form.studentClass}
-                  onChange={e => setForm({...form, studentClass: e.target.value})}
-                  required />
-              </div>
+            <div className="form-group">
+              <label>Class *</label>
+              <input type="text" placeholder="e.g. TY-B, SY-A"
+                value={form.studentClass}
+                onChange={e => setForm({ ...form, studentClass: e.target.value })}
+                required />
+            </div>
 
-              <div className="form-group">
-                <label>Mobile Number * (10 digits)</label>
-                <input type="text" placeholder="e.g. 9876543210"
-                  value={form.mobile}
-                  onChange={e => {
-                    const val = e.target.value.replace(/\D/g, '');
-                    setForm({...form, mobile: val});
-                  }}
-                  maxLength={10}
-                  required
-                  style={{
-                    border: form.mobile && !isValidMobile(form.mobile) ? '1px solid #dc2626' : ''
-                  }} />
-                {form.mobile && !isValidMobile(form.mobile) && (
-                  <p style={{ color:'#dc2626', fontSize:11, margin:'3px 0 0' }}>
-                    ⚠️ Must be 10 digits starting with 6, 7, 8 or 9
-                  </p>
-                )}
-              </div>
+            <div className="form-group">
+              <label>Mobile Number * (10 digits)</label>
+              <input type="text" placeholder="e.g. 9876543210"
+                value={form.mobile}
+                onChange={e => {
+                  const val = e.target.value.replace(/\D/g, '');
+                  setForm({ ...form, mobile: val });
+                }}
+                maxLength={10}
+                required
+                style={{ border: form.mobile && !isValidMobile(form.mobile) ? '1px solid #dc2626' : '' }} />
+              {form.mobile && !isValidMobile(form.mobile) && (
+                <p style={{ color: '#dc2626', fontSize: 11, margin: '3px 0 0' }}>
+                  ⚠️ Must be 10 digits starting with 6, 7, 8 or 9
+                </p>
+              )}
+            </div>
 
-              <div className="form-group">
-                <label>Email</label>
-                <input type="text" value={invite.email} disabled
-                  style={{ background:'#f9fafb', color:'#888' }} />
-              </div>
+            <div className="form-group">
+              <label>Password * (min 6 characters)</label>
+              <input type="password" placeholder="Create a strong password"
+                value={form.password}
+                onChange={e => setForm({ ...form, password: e.target.value })}
+                required />
+            </div>
 
-              <div className="form-group">
-                <label>Password * (min 6 characters)</label>
-                <input type="password" placeholder="Create a strong password"
-                  value={form.password}
-                  onChange={e => setForm({...form, password: e.target.value})}
-                  required />
-              </div>
+            <div className="form-group">
+              <label>Confirm Password *</label>
+              <input type="password" placeholder="Re-enter your password"
+                value={form.confirmPassword}
+                onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
+                required
+                style={{ border: form.confirmPassword && form.password !== form.confirmPassword ? '1px solid #dc2626' : '' }} />
+              {form.confirmPassword && form.password !== form.confirmPassword && (
+                <p style={{ color: '#dc2626', fontSize: 11, margin: '3px 0 0' }}>
+                  ⚠️ Passwords do not match
+                </p>
+              )}
+            </div>
 
-              <div className="form-group">
-                <label>Confirm Password *</label>
-                <input type="password" placeholder="Re-enter your password"
-                  value={form.confirmPassword}
-                  onChange={e => setForm({...form, confirmPassword: e.target.value})}
-                  required
-                  style={{
-                    border: form.confirmPassword && form.password !== form.confirmPassword ? '1px solid #dc2626' : ''
-                  }} />
-                {form.confirmPassword && form.password !== form.confirmPassword && (
-                  <p style={{ color:'#dc2626', fontSize:11, margin:'3px 0 0' }}>
-                    ⚠️ Passwords do not match
-                  </p>
-                )}
-              </div>
+            <button className="btn btn-primary"
+              style={{ width: '100%', marginTop: 8, padding: 12 }}
+              type="submit">
+              Create My Account
+            </button>
 
-              <button className="btn btn-primary"
-                style={{ width:'100%', marginTop:8, padding:12 }}
-                type="submit">
-                Create My Account
-              </button>
-            </form>
-
-            <p style={{ textAlign:'center', marginTop:16, fontSize:13, color:'#888' }}>
+            <p style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: '#888' }}>
               Already registered?{' '}
-              <a href="/login" style={{ color:'#4f46e5' }}>Login here</a>
+              <a href="/login" style={{ color: '#4f46e5' }}>Login here</a>
             </p>
-          </>
+          </form>
         )}
       </div>
     </div>

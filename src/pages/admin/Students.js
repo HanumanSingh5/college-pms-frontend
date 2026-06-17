@@ -16,23 +16,29 @@ const links = [
 ];
 
 export default function AdminStudents() {
-  const [students, setStudents]           = useState([]);
+  const [students, setStudents]               = useState([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [showLinkModal, setShowLinkModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showResetModal, setShowResetModal] = useState(false);
-  const [editing, setEditing]             = useState(null);
-  const [resetStudent, setResetStudent]   = useState(null);
-  const [loading, setLoading]             = useState(false);
-  const [resetLoading, setResetLoading]   = useState(false);
-  const [inviteLink, setInviteLink]       = useState('');
-  const [newPassword, setNewPassword]     = useState('');
-  const [searchTerm, setSearchTerm]       = useState('');
+  const [showExcelModal, setShowExcelModal]   = useState(false);
+  const [showLinkModal, setShowLinkModal]     = useState(false);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [showEditModal, setShowEditModal]     = useState(false);
+  const [showResetModal, setShowResetModal]   = useState(false);
+  const [editing, setEditing]                 = useState(null);
+  const [resetStudent, setResetStudent]       = useState(null);
+  const [loading, setLoading]                 = useState(false);
+  const [resetLoading, setResetLoading]       = useState(false);
+  const [inviteEmail, setInviteEmail]         = useState('');
+  const [inviteLink, setInviteLink]           = useState('');
+  const [excelFile, setExcelFile]             = useState(null);
+  const [uploadResults, setUploadResults]     = useState(null);
+  const [newPassword, setNewPassword]         = useState('');
+  const [searchTerm, setSearchTerm]           = useState('');
   const [editForm, setEditForm] = useState({
     name:'', email:'', password:'', enrollment:'', mobile:'', studentClass:''
   });
   const token = localStorage.getItem('token');
   const h = { headers: { Authorization: 'Bearer ' + token } };
+
   const LIVE_URL = 'https://college-pms-frontend.vercel.app';
 
   const load = () => {
@@ -43,19 +49,61 @@ export default function AdminStudents() {
 
   useEffect(() => { load(); }, []);
 
-  // Generate link WITHOUT email — student fills their own details
   const generateInvite = async () => {
     setLoading(true);
     try {
-      const res = await axios.post(`${API}/api/admin/invite-student`, {}, h);
+      const res = await axios.post(
+        `${API}/api/admin/invite-student`,
+        {},
+        h
+      );
+      // Replace localhost in the returned link with the live URL
       const fixedLink = res.data.link
         ? res.data.link.replace('http://localhost:3000', LIVE_URL)
         : res.data.link;
       setInviteLink(fixedLink);
       setShowInviteModal(false);
       setShowLinkModal(true);
+      setInviteEmail('');
     } catch (err) {
       toast.error(err.response?.data?.msg || 'Failed to generate link');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const uploadExcel = async (e) => {
+    e.preventDefault();
+    if (!excelFile) return toast.error('Please select an Excel file');
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', excelFile);
+      const res = await axios.post(
+        `${API}/api/admin/upload-students-excel`,
+        formData,
+        { headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'multipart/form-data' } }
+      );
+      // Fix localhost links in results
+      if (res.data.results?.success) {
+        res.data.results.success = res.data.results.success.map(item => ({
+          ...item,
+          link: item.link ? item.link.replace('http://localhost:3000', LIVE_URL) : item.link
+        }));
+      }
+      if (res.data.results?.alreadyInvited) {
+        res.data.results.alreadyInvited = res.data.results.alreadyInvited.map(item => ({
+          ...item,
+          link: item.link ? item.link.replace('http://localhost:3000', LIVE_URL) : item.link
+        }));
+      }
+      setUploadResults(res.data.results);
+      setShowExcelModal(false);
+      setShowResultModal(true);
+      setExcelFile(null);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.msg || 'Upload failed');
     } finally {
       setLoading(false);
     }
@@ -102,13 +150,20 @@ export default function AdminStudents() {
 
   const resetPassword = async (e) => {
     e.preventDefault();
-    if (!newPassword || newPassword.length < 4)
+    if (!newPassword || newPassword.length < 4) {
       return toast.error('Password must be at least 4 characters');
+    }
     setResetLoading(true);
     try {
       await axios.put(
         `${API}/api/admin/student/${resetStudent._id}`,
-        { name: resetStudent.name, email: resetStudent.email, enrollment: resetStudent.enrollment, mobile: resetStudent.mobile, password: newPassword }, h
+        {
+          name:       resetStudent.name,
+          email:      resetStudent.email,
+          enrollment: resetStudent.enrollment,
+          mobile:     resetStudent.mobile,
+          password:   newPassword,
+        }, h
       );
       toast.success('Password reset successfully!');
       setShowResetModal(false);
@@ -145,28 +200,29 @@ export default function AdminStudents() {
         <Sidebar links={links} />
         <div className="main-content">
 
-          {/* Header */}
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
             <h2>Students ({students.length})</h2>
-            <button type="button" className="btn btn-primary"
-              onClick={() => setShowInviteModal(true)}>
-              + Generate Registration Link
-            </button>
+            <div style={{ display:'flex', gap:10 }}>
+              <button type="button" className="btn btn-primary"
+                onClick={() => setShowInviteModal(true)}>
+                + Single Invite
+              </button>
+              <button type="button" className="btn btn-success"
+                onClick={() => setShowExcelModal(true)}>
+                📊 Upload Excel
+              </button>
+            </div>
           </div>
 
-          {/* Info banner */}
           <div style={{
             background:'#eff6ff', border:'1px solid #bfdbfe',
             borderRadius:10, padding:'12px 18px', marginBottom:16,
             fontSize:13, color:'#1e40af', lineHeight:1.7
           }}>
-            <strong>How it works:</strong> Click "Generate Registration Link" →
-            Copy the link → Share it with the student (WhatsApp/Email) →
-            Student opens the link and fills their own Name, Email, Enrollment, Class &amp; Password.
+            <strong>Student Registration:</strong> Generate a link → Share it with student manually → Student opens link and fills their own email, name, enrollment &amp; sets password.
             If student forgets password, use <strong>🔑 Password</strong> button below.
           </div>
 
-          {/* Search */}
           <input type="text"
             placeholder="Search by name, email, enrollment or class..."
             value={searchTerm}
@@ -179,7 +235,6 @@ export default function AdminStudents() {
             }}
           />
 
-          {/* Table */}
           <div className="card" style={{ overflowX:'auto' }}>
             <table style={{ minWidth:1000 }}>
               <thead>
@@ -199,7 +254,7 @@ export default function AdminStudents() {
                 {filtered.length === 0 && (
                   <tr>
                     <td colSpan="9" style={{ textAlign:'center', color:'#888', padding:32 }}>
-                      {searchTerm ? 'No students match your search.' : 'No students yet. Generate a link and share it!'}
+                      {searchTerm ? 'No students match your search.' : 'No students yet.'}
                     </td>
                   </tr>
                 )}
@@ -221,7 +276,9 @@ export default function AdminStudents() {
                         {s.isVerified ? 'Registered' : 'Pending'}
                       </span>
                     </td>
-                    <td style={{ fontSize:13 }}>{new Date(s.createdAt).toLocaleDateString()}</td>
+                    <td style={{ fontSize:13 }}>
+                      {new Date(s.createdAt).toLocaleDateString()}
+                    </td>
                     <td>
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                         <button type="button" className="btn btn-warning"
@@ -234,7 +291,8 @@ export default function AdminStudents() {
                           style={{
                             padding:'5px 10px', fontSize:12,
                             background:'#6366f1', color:'white',
-                            border:'none', borderRadius:8, cursor:'pointer', fontWeight:600
+                            border:'none', borderRadius:8, cursor:'pointer',
+                            fontWeight:600
                           }}>
                           🔑 Password
                         </button>
@@ -254,123 +312,118 @@ export default function AdminStudents() {
         </div>
       </div>
 
-      {/* ── Invite Confirmation Modal ── */}
-      {showInviteModal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
-          <div style={{ background:'white', borderRadius:16, padding:32, width:'100%', maxWidth:460, boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
-            <div style={{ textAlign:'center', marginBottom:20 }}>
-              <div style={{ fontSize:48, marginBottom:8 }}>🔗</div>
-              <h3 style={{ margin:0 }}>Generate Registration Link</h3>
-            </div>
-            <div style={{ background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:10, padding:'14px 16px', marginBottom:20, fontSize:13, color:'#1e40af', lineHeight:1.7 }}>
-              A unique one-time registration link will be created.<br/>
-              <strong>Share it with the student</strong> — they will open the link
-              and fill in their own Email, Name, Enrollment, Class and set their Password.
-            </div>
-            <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-              <button type="button"
-                onClick={() => setShowInviteModal(false)}
-                style={{ padding:'10px 20px', borderRadius:8, border:'none', background:'#e5e7eb', cursor:'pointer', fontSize:14 }}>
-                Cancel
-              </button>
-              <button type="button" className="btn btn-primary"
-                disabled={loading} onClick={generateInvite}
-                style={{ padding:'10px 24px', fontSize:14 }}>
-                {loading ? 'Generating...' : '🔗 Generate Link'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Link Display Modal ── */}
-      {showLinkModal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
-          <div style={{ background:'white', borderRadius:16, padding:32, width:'100%', maxWidth:520, boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
-            <div style={{ textAlign:'center', marginBottom:20 }}>
-              <div style={{ fontSize:48, marginBottom:8 }}>✅</div>
-              <h3 style={{ margin:0 }}>Registration Link Ready!</h3>
-            </div>
-
-            <div style={{ background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:10, padding:'12px 16px', marginBottom:12, fontSize:13, color:'#1e40af', lineHeight:1.7 }}>
-              📤 Share this link with the student via <strong>WhatsApp, Email or any message</strong>.<br/>
-              Student opens it → fills Name, Email, Enrollment, Class → sets Password → account created!
-            </div>
-
-            {/* Link box */}
-            <div style={{ background:'#f0f4ff', border:'2px solid #c7d2fe', borderRadius:10, padding:'14px 16px', marginBottom:16, wordBreak:'break-all', fontSize:13, color:'#4f46e5', fontWeight:500 }}>
-              {inviteLink}
-            </div>
-
-            <div style={{ background:'#fef9c3', borderRadius:8, padding:'10px 14px', marginBottom:20, fontSize:13, color:'#854d0e' }}>
-              ⚠️ This link can only be used <strong>once</strong>. Generate a new link for each student.
-              If student forgets password later, use <strong>🔑 Password</strong> button in the table.
-            </div>
-
-            <div style={{ display:'flex', gap:10 }}>
-              <button type="button" className="btn btn-primary"
-                onClick={copyLink} style={{ flex:1, padding:12, fontSize:14 }}>
-                📋 Copy Link
-              </button>
-              <button type="button" className="btn"
-                onClick={() => { setShowLinkModal(false); load(); }}
-                style={{ flex:1, padding:12, background:'#e5e7eb', fontSize:14 }}>
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Reset Password Modal ── */}
+      {/* Reset Password Modal */}
       {showResetModal && resetStudent && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
           <div style={{ background:'white', borderRadius:16, padding:32, width:'100%', maxWidth:440, boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
             <h3 style={{ marginBottom:4 }}>🔑 Reset Student Password</h3>
-            <p style={{ color:'#666', fontSize:14, marginBottom:20 }}>Reset the login password for this student.</p>
+            <p style={{ color:'#666', fontSize:14, marginBottom:20 }}>
+              Reset the login password for this student.
+            </p>
 
             <div style={{ background:'#f9fafb', borderRadius:10, padding:'14px 16px', marginBottom:20 }}>
-              <div style={{ fontSize:13, marginBottom:6 }}><strong>Student:</strong> {resetStudent.name || 'Not registered yet'}</div>
-              <div style={{ fontSize:13, marginBottom:6 }}><strong>Email:</strong> {resetStudent.email}</div>
-              {resetStudent.enrollment && <div style={{ fontSize:13 }}><strong>Enrollment:</strong> {resetStudent.enrollment}</div>}
+              <div style={{ fontSize:13, marginBottom:6 }}>
+                <strong>Student:</strong> {resetStudent.name || 'Not registered yet'}
+              </div>
+              <div style={{ fontSize:13, marginBottom:6 }}>
+                <strong>Email:</strong> {resetStudent.email}
+              </div>
+              {resetStudent.enrollment && (
+                <div style={{ fontSize:13 }}>
+                  <strong>Enrollment:</strong> {resetStudent.enrollment}
+                </div>
+              )}
             </div>
 
             <form onSubmit={resetPassword}>
               <div className="form-group">
                 <label>New Password</label>
-                <input type="text"
+                <input
+                  type="text"
                   placeholder="Enter new password (min 4 characters)"
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
-                  required autoFocus
-                  style={{ width:'100%', padding:'10px 14px', border:'1px solid #d1d5db', borderRadius:8, fontSize:14, outline:'none', boxSizing:'border-box' }}
+                  required
+                  autoFocus
+                  style={{
+                    width:'100%', padding:'10px 14px',
+                    border:'1px solid #d1d5db', borderRadius:8,
+                    fontSize:14, outline:'none', boxSizing:'border-box'
+                  }}
                 />
               </div>
 
               {newPassword.length >= 4 && (
-                <div style={{ background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:10, padding:'14px 16px', marginBottom:16 }}>
-                  <strong style={{ fontSize:13, display:'block', marginBottom:8, color:'#16a34a' }}>📋 Credentials to share:</strong>
-                  <div style={{ fontSize:13 }}>
-                    <div style={{ marginBottom:4 }}>Email: <strong>{resetStudent.email}</strong></div>
-                    <div style={{ marginBottom:8 }}>Password: <span style={{ background:'#e0e7ff', color:'#3730a3', padding:'4px 12px', borderRadius:6, fontFamily:'monospace', fontWeight:700 }}>{newPassword}</span></div>
-                    <div>Login: <a href={LIVE_URL+'/login'} style={{ color:'#4f46e5', fontSize:12 }}>{LIVE_URL}/login</a></div>
-                  </div>
+                <div style={{
+                  background:'#f0fdf4', border:'1px solid #bbf7d0',
+                  borderRadius:10, padding:'14px 16px', marginBottom:16
+                }}>
+                  <strong style={{ fontSize:13, display:'block', marginBottom:8, color:'#16a34a' }}>
+                    📋 New credentials to share with student:
+                  </strong>
+                  <table style={{ width:'100%', fontSize:13 }}>
+                    <tbody>
+                      <tr>
+                        <td style={{ padding:'4px 0', color:'#555', width:80 }}>Email:</td>
+                        <td style={{ padding:'4px 0', fontWeight:700 }}>{resetStudent.email}</td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding:'4px 0', color:'#555' }}>Password:</td>
+                        <td style={{ padding:'4px 0' }}>
+                          <span style={{
+                            background:'#e0e7ff', color:'#3730a3',
+                            padding:'4px 12px', borderRadius:6,
+                            fontFamily:'monospace', fontWeight:700,
+                            fontSize:15, letterSpacing:1
+                          }}>
+                            {newPassword}
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding:'4px 0', color:'#555' }}>Login URL:</td>
+                        <td style={{ padding:'4px 0' }}>
+                          <a href={LIVE_URL + '/login'}
+                            style={{ color:'#4f46e5', fontSize:12 }}>
+                            {LIVE_URL}/login
+                          </a>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                   <button type="button"
-                    onClick={() => { navigator.clipboard.writeText('Login: '+LIVE_URL+'/login\nEmail: '+resetStudent.email+'\nPassword: '+newPassword); toast.success('Copied!'); }}
-                    style={{ marginTop:10, padding:'6px 14px', background:'#4f46e5', color:'white', border:'none', borderRadius:6, cursor:'pointer', fontSize:12, fontWeight:600 }}>
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        'Login URL: ' + LIVE_URL + '/login\nEmail: ' + resetStudent.email + '\nPassword: ' + newPassword
+                      );
+                      toast.success('Credentials copied!');
+                    }}
+                    style={{
+                      marginTop:10, padding:'6px 14px',
+                      background:'#4f46e5', color:'white',
+                      border:'none', borderRadius:6,
+                      cursor:'pointer', fontSize:12, fontWeight:600
+                    }}>
                     📋 Copy Credentials
                   </button>
                 </div>
               )}
 
-              <div style={{ background:'#fef9c3', borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:12, color:'#854d0e' }}>
-                ⚠️ Share new credentials with student. Old password will stop working.
+              <div style={{
+                background:'#fef9c3', borderRadius:8,
+                padding:'10px 14px', marginBottom:16,
+                fontSize:12, color:'#854d0e'
+              }}>
+                ⚠️ After resetting, share the new credentials with the student directly.
+                The old password will no longer work.
               </div>
 
               <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
                 <button type="button" className="btn"
                   onClick={() => { setShowResetModal(false); setNewPassword(''); }}
-                  style={{ background:'#e5e7eb' }}>Cancel</button>
+                  style={{ background:'#e5e7eb' }}>
+                  Cancel
+                </button>
                 <button type="submit" className="btn btn-primary" disabled={resetLoading}>
                   {resetLoading ? 'Resetting...' : '🔑 Reset Password'}
                 </button>
@@ -380,20 +433,211 @@ export default function AdminStudents() {
         </div>
       )}
 
-      {/* ── Edit Modal ── */}
+      {/* Single Invite Modal */}
+      {showInviteModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
+          <div style={{ background:'white', borderRadius:16, padding:32, width:'100%', maxWidth:440, boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ marginBottom:8 }}>Generate Registration Link</h3>
+            <p style={{ color:'#666', fontSize:14, marginBottom:20 }}>
+              A unique one-time registration link will be generated. Share it with the student — they will enter their own email and details.
+            </p>
+            <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:20 }}>
+              <button type="button" onClick={() => setShowInviteModal(false)}
+                style={{ padding:'10px 20px', borderRadius:8, border:'none', background:'#e5e7eb', cursor:'pointer' }}>
+                Cancel
+              </button>
+              <button type="button" className="btn btn-primary" disabled={loading}
+                onClick={generateInvite}>
+                {loading ? 'Generating...' : 'Generate Link'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Link Display Modal */}
+      {showLinkModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
+          <div style={{ background:'white', borderRadius:16, padding:32, width:'100%', maxWidth:500, boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ textAlign:'center', marginBottom:20 }}>
+              <div style={{ fontSize:48, marginBottom:8 }}>✅</div>
+              <h3>Registration Link Generated!</h3>
+            </div>
+            <div style={{ background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:10, padding:'12px 16px', marginBottom:12, fontSize:13, color:'#1e40af' }}>
+              Student opens this link → enters their own Email, Name, Enrollment, Class → sets their own password → logged in automatically.
+            </div>
+            <div style={{ background:'#f0f4ff', border:'1px solid #c7d2fe', borderRadius:10, padding:'14px 16px', marginBottom:12, wordBreak:'break-all', fontSize:13, color:'#4f46e5' }}>
+              {inviteLink}
+            </div>
+            <div style={{ background:'#fef9c3', borderRadius:8, padding:'10px 14px', marginBottom:20, fontSize:13, color:'#854d0e' }}>
+              ⚠️ Student sets their own password. If they forget it, use the <strong>🔑 Password</strong> button in the table to reset it.
+            </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <button type="button" className="btn btn-primary" onClick={copyLink} style={{ flex:1, padding:12 }}>
+                📋 Copy Link
+              </button>
+              <button type="button" className="btn" onClick={() => { setShowLinkModal(false); load(); }}
+                style={{ flex:1, padding:12, background:'#e5e7eb' }}>
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Excel Upload Modal */}
+      {showExcelModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
+          <div style={{ background:'white', borderRadius:16, padding:32, width:'100%', maxWidth:520, boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ marginBottom:8 }}>Upload Excel & Send Registration Emails</h3>
+            <p style={{ color:'#666', fontSize:14, marginBottom:16 }}>
+              Upload Excel file with student names. Registration links will be generated for each row — share them with students manually.
+            </p>
+            <div style={{ background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:10, padding:16, marginBottom:16 }}>
+              <strong style={{ fontSize:13, display:'block', marginBottom:8 }}>Required Excel format:</strong>
+              <table style={{ fontSize:13, borderCollapse:'collapse' }}>
+                <thead>
+                  <tr style={{ background:'#4f46e5', color:'white' }}>
+                    <th style={{ padding:'6px 12px' }}>Name</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ background:'#f0f4ff' }}>
+                    <td style={{ padding:'6px 12px', border:'1px solid #e5e7eb' }}>Raj Patel</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding:'6px 12px', border:'1px solid #e5e7eb' }}>Priya Shah</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <form onSubmit={uploadExcel}>
+              <div className="form-group">
+                <label>Select Excel File (.xlsx or .xls)</label>
+                <input type="file" accept=".xlsx,.xls"
+                  onChange={e => setExcelFile(e.target.files[0])}
+                  required
+                  style={{ width:'100%', padding:'10px 14px', border:'2px dashed #c7d2fe', borderRadius:8, fontSize:14, cursor:'pointer', boxSizing:'border-box', background:'#f8f9ff' }} />
+                {excelFile && <p style={{ margin:'6px 0 0', fontSize:13, color:'#4f46e5' }}>Selected: {excelFile.name}</p>}
+              </div>
+              <div style={{ background:'#fef9c3', borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#854d0e' }}>
+                One registration link will be generated per row. Each link is single-use.
+              </div>
+              <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
+                <button type="button" onClick={() => setShowExcelModal(false)}
+                  style={{ padding:'10px 20px', borderRadius:8, border:'none', background:'#e5e7eb', cursor:'pointer' }}
+                  disabled={loading}>Cancel</button>
+                <button type="submit" className="btn btn-success" disabled={loading}>
+                  {loading ? 'Processing...' : '📊 Upload & Generate Links'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Results Modal */}
+      {showResultModal && uploadResults && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
+          <div style={{ background:'white', borderRadius:16, padding:32, width:'100%', maxWidth:580, maxHeight:'90vh', overflowY:'auto', boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ marginBottom:20 }}>Upload Results</h3>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:20 }}>
+              <div style={{ background:'#f0fdf4', borderRadius:10, padding:14, textAlign:'center' }}>
+                <div style={{ fontSize:26, fontWeight:700, color:'#16a34a' }}>{uploadResults.success?.length || 0}</div>
+                <div style={{ fontSize:12, color:'#166534', marginTop:4 }}>Emails Sent</div>
+              </div>
+              <div style={{ background:'#fef9c3', borderRadius:10, padding:14, textAlign:'center' }}>
+                <div style={{ fontSize:26, fontWeight:700, color:'#ca8a04' }}>{uploadResults.alreadyInvited?.length || 0}</div>
+                <div style={{ fontSize:12, color:'#854d0e', marginTop:4 }}>Already Invited</div>
+              </div>
+              <div style={{ background:'#fee2e2', borderRadius:10, padding:14, textAlign:'center' }}>
+                <div style={{ fontSize:26, fontWeight:700, color:'#dc2626' }}>{uploadResults.alreadyRegistered?.length || 0}</div>
+                <div style={{ fontSize:12, color:'#991b1b', marginTop:4 }}>Already Registered</div>
+              </div>
+              <div style={{ background:'#f3f4f6', borderRadius:10, padding:14, textAlign:'center' }}>
+                <div style={{ fontSize:26, fontWeight:700, color:'#6b7280' }}>{uploadResults.failed?.length || 0}</div>
+                <div style={{ fontSize:12, color:'#4b5563', marginTop:4 }}>Failed</div>
+              </div>
+            </div>
+
+            {uploadResults.success?.length > 0 && (
+              <div style={{ marginBottom:16 }}>
+                <strong style={{ color:'#16a34a', display:'block', marginBottom:8 }}>
+                  Emails Sent ({uploadResults.success.length})
+                </strong>
+                <div style={{ background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:8, padding:10, maxHeight:120, overflowY:'auto', fontSize:12 }}>
+                  {uploadResults.success.map((item, i) => (
+                    <div key={i} style={{ padding:'3px 0', borderBottom:'1px solid #dcfce7' }}>
+                      {item.name && <strong>{item.name} — </strong>}{item.email}
+                      <span style={{ float:'right', color: item.emailSent ? '#16a34a' : '#dc2626' }}>
+                        {'🔗 Link ready'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {uploadResults.alreadyRegistered?.length > 0 && (
+              <div style={{ marginBottom:16 }}>
+                <strong style={{ color:'#dc2626', display:'block', marginBottom:8 }}>
+                  Already Registered — Skipped ({uploadResults.alreadyRegistered.length})
+                </strong>
+                <div style={{ background:'#fee2e2', borderRadius:8, padding:10, fontSize:12, maxHeight:80, overflowY:'auto' }}>
+                  {uploadResults.alreadyRegistered.map((item, i) => (
+                    <span key={i}>{item.email || item}{i < uploadResults.alreadyRegistered.length - 1 ? ', ' : ''}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button type="button" className="btn btn-primary"
+              onClick={() => { setShowResultModal(false); load(); }}
+              style={{ width:'100%', padding:12, marginTop:8 }}>
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
       {showEditModal && editing && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
           <div style={{ background:'white', borderRadius:16, padding:32, width:'100%', maxWidth:480, maxHeight:'90vh', overflowY:'auto', boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
             <h3 style={{ marginBottom:20 }}>Edit Student</h3>
             <form onSubmit={saveEdit}>
-              <div className="form-group"><label>Full Name</label><input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name:e.target.value})} /></div>
-              <div className="form-group"><label>Email</label><input type="email" value={editForm.email} onChange={e => setEditForm({...editForm, email:e.target.value})} /></div>
-              <div className="form-group"><label>Enrollment No.</label><input type="text" value={editForm.enrollment} onChange={e => setEditForm({...editForm, enrollment:e.target.value})} /></div>
-              <div className="form-group"><label>Class</label><input type="text" value={editForm.studentClass} onChange={e => setEditForm({...editForm, studentClass:e.target.value})} /></div>
-              <div className="form-group"><label>Mobile No.</label><input type="text" value={editForm.mobile} onChange={e => setEditForm({...editForm, mobile:e.target.value})} /></div>
+              <div className="form-group">
+                <label>Full Name</label>
+                <input type="text" value={editForm.name}
+                  onChange={e => setEditForm({...editForm, name: e.target.value})} />
+              </div>
+              <div className="form-group">
+                <label>Email</label>
+                <input type="email" value={editForm.email}
+                  onChange={e => setEditForm({...editForm, email: e.target.value})} />
+              </div>
+              <div className="form-group">
+                <label>Enrollment No.</label>
+                <input type="text" value={editForm.enrollment}
+                  onChange={e => setEditForm({...editForm, enrollment: e.target.value})} />
+              </div>
+              <div className="form-group">
+                <label>Class</label>
+                <input type="text" value={editForm.studentClass}
+                  onChange={e => setEditForm({...editForm, studentClass: e.target.value})} />
+              </div>
+              <div className="form-group">
+                <label>Mobile No.</label>
+                <input type="text" value={editForm.mobile}
+                  onChange={e => setEditForm({...editForm, mobile: e.target.value})} />
+              </div>
               <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:20 }}>
-                <button type="button" className="btn" onClick={() => setShowEditModal(false)} style={{ background:'#e5e7eb' }}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'Saving...' : 'Update Student'}</button>
+                <button type="button" className="btn"
+                  onClick={() => setShowEditModal(false)}
+                  style={{ background:'#e5e7eb' }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={loading}>
+                  {loading ? 'Saving...' : 'Update Student'}
+                </button>
               </div>
             </form>
           </div>

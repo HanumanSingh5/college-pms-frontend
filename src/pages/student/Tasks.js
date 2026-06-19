@@ -195,11 +195,17 @@ export default function StudentTasks() {
                                 <span style={{ color:'#888' }}>on {new Date(mySubmission.submittedAt).toLocaleDateString()}</span>
                               </div>
                               {mySubmission.comment&&<p style={{ margin:'4px 0', color:'#555' }}>{mySubmission.comment}</p>}
-                              <a href={mySubmission.fileUrl || `${API}/uploads/${mySubmission.document}`}
-                                target="_blank" rel="noreferrer"
-                                style={{ color:'#4f46e5', fontSize:12 }}>
-                                📄 View my submission
-                              </a>
+                              {(() => {
+                                const rawUrl = mySubmission.document || mySubmission.fileUrl || '';
+                                const dlUrl = `${API}/api/student/download?url=${encodeURIComponent(rawUrl)}&name=${encodeURIComponent('my_submission_' + rawUrl.split('/').pop())}`;
+                                return (
+                                  <a href={dlUrl}
+                                    target="_blank" rel="noreferrer"
+                                    style={{ color:'#4f46e5', fontSize:12 }}>
+                                    📄 View my submission
+                                  </a>
+                                );
+                              })()}
                             </div>
                           )}
                         </div>

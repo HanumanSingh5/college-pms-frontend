@@ -359,15 +359,18 @@ export default function FacultyTasks() {
                     </div>
                   </div>
                   {sub.comment&&<p style={{ color:'#555', fontSize:13, marginBottom:8 }}>{sub.comment}</p>}
-                  {(sub.document || sub.fileUrl) && (
-                    
-                     <a href={`${API}/api/faculty/download?url=${encodeURIComponent(sub.document || sub.fileUrl)}&name=${encodeURIComponent((sub.student?.name || 'student') + '_' + (sub.document || sub.fileUrl).split('/').pop())}`}
-                      target="_blank" rel="noreferrer"
-                      className="btn btn-primary"
-                      style={{ padding:'6px 14px', fontSize:13 }}>
-                      📥 Download
-                    </a>
-                  )}
+                  {(sub.document || sub.fileUrl) && (() => {
+                    const rawUrl = sub.document || sub.fileUrl || '';
+                    const dlName = (sub.student?.name || 'student').replace(/\s+/g,'_') + '_' + rawUrl.split('/').pop();
+                    return (
+                      <a href={`${API}/api/faculty/download?url=${encodeURIComponent(rawUrl)}&name=${encodeURIComponent(dlName)}`}
+                        target="_blank" rel="noreferrer"
+                        className="btn btn-primary"
+                        style={{ padding:'6px 14px', fontSize:13 }}>
+                        📥 Download
+                      </a>
+                    );
+                  })()}
                 </div>
               ))
             )}

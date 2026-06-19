@@ -54,7 +54,6 @@ export default function AdminStudents() {
     try {
       const res = await axios.post(
         `${API}/api/admin/invite-student`,
-        {},
         h
       );
       // Replace localhost in the returned link with the live URL
@@ -186,6 +185,17 @@ export default function AdminStudents() {
     }
   };
 
+  const unlockTeam = async (s) => {
+    if (!window.confirm(`Unlock team editing for ${s.name}? They will be able to edit/remove their team members again.`)) return;
+    try {
+      await axios.put(`${API}/api/admin/student/${s._id}/team-lock`, { locked: false }, h);
+      toast.success('Team unlocked — student can edit again');
+      load();
+    } catch {
+      toast.error('Failed to unlock team');
+    }
+  };
+
   const filtered = students.filter(s =>
     (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (s.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -296,6 +306,19 @@ export default function AdminStudents() {
                           }}>
                           🔑 Password
                         </button>
+                        {s.teamLocked && (
+                          <button type="button"
+                            onClick={() => unlockTeam(s)}
+                            title="Allow student to edit their team again"
+                            style={{
+                              padding:'5px 10px', fontSize:12,
+                              background:'#f59e0b', color:'white',
+                              border:'none', borderRadius:8, cursor:'pointer',
+                              fontWeight:600
+                            }}>
+                            🔓 Unlock Team
+                          </button>
+                        )}
                         <button type="button" className="btn btn-danger"
                           onClick={() => remove(s._id)}
                           style={{ padding:'5px 10px', fontSize:12 }}>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useLocation } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
 import { toast } from 'react-toastify';
@@ -23,12 +24,15 @@ const PHASES = [
 ];
 
 export default function StudentTasks() {
+  const location = useLocation();
   const [tasks, setTasks]               = useState([]);
   const [uploadingId, setUploadingId]   = useState(null);
   const [comment, setComment]           = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [currentTask, setCurrentTask]   = useState(null);
+  // 'all' | 'pending' | 'completed' — set from Dashboard stat-card clicks via navigation state
+  const [filterStatus, setFilterStatus] = useState('all');
   const token     = localStorage.getItem('token');
   const studentId = localStorage.getItem('id');
   const h = { headers: { Authorization: 'Bearer ' + token } };
@@ -38,6 +42,12 @@ export default function StudentTasks() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // Pick up the status filter passed from the Dashboard's stat cards
+  useEffect(() => {
+    const incoming = location.state?.statusFilter;
+    if (incoming) setFilterStatus(incoming); // 'all' | 'pending' | 'completed'
+  }, [location.state]);
 
   const isOverdue = (dueDate) => dueDate && new Date(dueDate) < new Date();
 
@@ -94,9 +104,18 @@ export default function StudentTasks() {
     late:          'badge-danger',
   };
 
+  // Apply status filter before grouping by phase
+  // (pending bucket = anything not yet completed, matching faculty-side logic)
+  const filteredTasks = tasks.filter(t => {
+    if (filterStatus === 'all') return true;
+    if (filterStatus === 'completed') return t.status === 'completed';
+    if (filterStatus === 'pending') return t.status !== 'completed';
+    return true;
+  });
+
   const grouped = {};
   PHASES.forEach(p => { grouped[p.value] = []; });
-  tasks.forEach(t => {
+  filteredTasks.forEach(t => {
     if (t.phase && grouped[t.phase] !== undefined) {
       grouped[t.phase].push(t);
     } else {
@@ -120,19 +139,32 @@ export default function StudentTasks() {
     return null;
   };
 
+  const statusFilterStyle = (s) => ({
+    padding:'6px 14px', borderRadius:8, fontSize:12, border:'1px solid #d1d5db', cursor:'pointer',
+    background: filterStatus === s ? '#16a34a' : 'white',
+    color: filterStatus === s ? 'white' : '#555',
+  });
+
   return (
     <div>
       <Navbar title="Student Portal" />
       <div className="layout">
         <Sidebar links={links} />
         <div className="main-content">
-          <h2 style={{ marginBottom:20 }}>My Tasks</h2>
+          <h2 style={{ marginBottom:16 }}>My Tasks</h2>
 
-          {tasks.length===0 && (
+          {/* Status filter (Pending / Completed / All) — driven by Dashboard stat-card clicks, also clickable here */}
+          <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:20 }}>
+            <button type="button" onClick={() => setFilterStatus('all')} style={statusFilterStyle('all')}>All Status</button>
+            <button type="button" onClick={() => setFilterStatus('pending')} style={statusFilterStyle('pending')}>⏳ Pending</button>
+            <button type="button" onClick={() => setFilterStatus('completed')} style={statusFilterStyle('completed')}>✅ Completed</button>
+          </div>
+
+          {filteredTasks.length===0 && (
             <div className="card" style={{ textAlign:'center', color:'#888', padding:40 }}>
               <div style={{ fontSize:48, marginBottom:12 }}>📋</div>
-              <h3>No Tasks Assigned Yet</h3>
-              <p>Your faculty will assign tasks to your group.</p>
+              <h3>No Tasks Found</h3>
+              <p>{tasks.length===0 ? 'Your faculty will assign tasks to your group.' : 'Try a different filter above.'}</p>
             </div>
           )}
 

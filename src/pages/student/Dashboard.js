@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
 
@@ -16,6 +17,8 @@ export default function StudentDashboard() {
   const [profile, setProfile] = useState(null);
   const token = localStorage.getItem('token');
   const h = { headers: { Authorization: `Bearer ${token}` } };
+  const navigate = useNavigate();
+  const projectInfoRef = useRef(null);
 
   const load = () => {
     axios.get(`${process.env.REACT_APP_API_URL}/api/student/stats`,   h).then(r => setStats(r.data));
@@ -32,6 +35,16 @@ export default function StudentDashboard() {
   };
 
   const badge = statusBadge(stats.definitionStatus);
+
+  // Card click handlers — each card jumps to the page (or section) it summarizes.
+  const goToProjectInfo = () => {
+    if (project && projectInfoRef.current) {
+      projectInfoRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    // If no project is assigned yet there's nothing to navigate to.
+  };
+  const goToDefinitions = () => navigate('/student/definition');
+  const goToTasks = (statusFilter) => navigate('/student/tasks', { state: { statusFilter } });
 
   return (
     <div>
@@ -68,24 +81,52 @@ export default function StudentDashboard() {
 
           {/* Stats */}
           <div className="stats-grid" style={{ marginBottom:24 }}>
-            <div className="stat-card">
+            <div
+              className="stat-card"
+              onClick={goToProjectInfo}
+              role="button"
+              tabIndex={0}
+              style={{ cursor: project ? 'pointer' : 'default' }}
+              title={project ? 'View project details' : 'No project assigned yet'}
+            >
               <h3 style={{ fontSize:20, color: project ? '#16a34a' : '#dc2626' }}>
                 {project ? '✅' : '❌'}
               </h3>
               <p>Project {project ? 'Assigned' : 'Not Assigned'}</p>
             </div>
-            <div className="stat-card">
+            <div
+              className="stat-card"
+              onClick={goToDefinitions}
+              role="button"
+              tabIndex={0}
+              style={{ cursor:'pointer' }}
+              title="View / submit project definitions"
+            >
               <h3 style={{ fontSize:14, color: badge.color }}>
                 {stats.definitionStatus === 'finalized' ? '✅' :
                  stats.definitionStatus === 'submitted' ? '📤' : '⏳'}
               </h3>
               <p>Definition: {stats.definitionStatus || 'pending'}</p>
             </div>
-            <div className="stat-card">
+            <div
+              className="stat-card"
+              onClick={() => goToTasks('all')}
+              role="button"
+              tabIndex={0}
+              style={{ cursor:'pointer' }}
+              title="View all my tasks"
+            >
               <h3>{stats.tasks || 0}</h3>
               <p>Total Tasks</p>
             </div>
-            <div className="stat-card">
+            <div
+              className="stat-card"
+              onClick={() => goToTasks('completed')}
+              role="button"
+              tabIndex={0}
+              style={{ cursor:'pointer' }}
+              title="View completed tasks"
+            >
               <h3>{stats.completed || 0}</h3>
               <p>Completed</p>
             </div>
@@ -139,7 +180,7 @@ export default function StudentDashboard() {
 
           {/* Project Info */}
           {project ? (
-            <div className="card">
+            <div className="card" ref={projectInfoRef}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 }}>
                 <div>
                   <h3 style={{ margin:'0 0 4px' }}>

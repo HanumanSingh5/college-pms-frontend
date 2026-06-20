@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
 
@@ -15,6 +16,7 @@ const links = [
 ];
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [stats, setStats]       = useState({ faculties:0, students:0, projects:0, tasks:0 });
   const [projects, setProjects] = useState([]);
   const [tab, setTab]           = useState('overview');
@@ -44,10 +46,30 @@ export default function AdminDashboard() {
         <div className="main-content">
 
           <div className="stats-grid" style={{ marginBottom:24 }}>
-            <div className="stat-card"><h3>{stats.faculties}</h3><p>Total Faculties</p></div>
-            <div className="stat-card"><h3>{stats.students}</h3><p>Total Students</p></div>
-            <div className="stat-card"><h3>{stats.projects}</h3><p>Total Projects</p></div>
-            <div className="stat-card"><h3>{stats.tasks}</h3><p>Total Tasks</p></div>
+            <div className="stat-card" onClick={() => navigate('/admin/faculties')}
+              style={{ cursor:'pointer', transition:'transform 0.15s, box-shadow 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow='0 8px 20px rgba(0,0,0,0.08)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
+              <h3>{stats.faculties}</h3><p>Total Faculties</p>
+            </div>
+            <div className="stat-card" onClick={() => navigate('/admin/students')}
+              style={{ cursor:'pointer', transition:'transform 0.15s, box-shadow 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow='0 8px 20px rgba(0,0,0,0.08)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
+              <h3>{stats.students}</h3><p>Total Students</p>
+            </div>
+            <div className="stat-card" onClick={() => navigate('/admin/projects')}
+              style={{ cursor:'pointer', transition:'transform 0.15s, box-shadow 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow='0 8px 20px rgba(0,0,0,0.08)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
+              <h3>{stats.projects}</h3><p>Total Projects</p>
+            </div>
+            <div className="stat-card" onClick={() => navigate('/admin/monitor')}
+              style={{ cursor:'pointer', transition:'transform 0.15s, box-shadow 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow='0 8px 20px rgba(0,0,0,0.08)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
+              <h3>{stats.tasks}</h3><p>Total Tasks</p>
+            </div>
           </div>
 
           <div style={{ borderBottom:'1px solid #e5e7eb', marginBottom:20, display:'flex', gap:4 }}>

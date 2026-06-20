@@ -27,6 +27,7 @@ const isValidEmail = (email) => {
   return true;
 };
 const isValidMobile = (mobile) => /^[6-9]\d{9}$/.test(mobile);
+const isValidEnrollment = (enrollment) => /^\d{1,14}$/.test(enrollment);
 
 export default function StudentTeam() {
   const [profile, setProfile]   = useState(null);
@@ -106,6 +107,9 @@ export default function StudentTeam() {
 
       if (!m.enrollment.trim())
         return toast.error(`Member ${num}: Enrollment number is required`);
+
+      if (!isValidEnrollment(m.enrollment.trim()))
+        return toast.error(`Member ${num}: Enrollment number must contain only digits (max 14 numbers)`);
 
       if (!m.email.trim())
         return toast.error(`Member ${num}: Email is required`);
@@ -266,19 +270,28 @@ export default function StudentTeam() {
                     </div>
                     <div>
                       <label style={{ display:'block', marginBottom:4, fontSize:13, fontWeight:500 }}>
-                        Enrollment Number *
+                        Enrollment Number * (numbers only, max 14)
                       </label>
-                      <input type="text" placeholder="e.g. 21CS001"
+                      <input type="text" placeholder="e.g. 24012250910002"
                         value={member.enrollment}
-                        onChange={e => updateMember(i, 'enrollment', e.target.value)}
+                        onChange={e => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 14);
+                          updateMember(i, 'enrollment', val);
+                        }}
+                        maxLength={14}
                         required
                         disabled={locked}
                         style={{
                           width:'100%', padding:'9px 12px',
-                          border: enrollDup ? '1px solid #dc2626' : '1px solid #d1d5db',
+                          border: (member.enrollment && !isValidEnrollment(member.enrollment)) || enrollDup ? '1px solid #dc2626' : '1px solid #d1d5db',
                           borderRadius:8, fontSize:14, boxSizing:'border-box',
                           background: locked ? '#f9fafb' : 'white'
                         }} />
+                      {member.enrollment && !isValidEnrollment(member.enrollment) && (
+                        <p style={{ color:'#dc2626', fontSize:11, margin:'3px 0 0' }}>
+                          ⚠️ Numbers only, maximum 14 digits
+                        </p>
+                      )}
                       {enrollDup && (
                         <p style={{ color:'#dc2626', fontSize:11, margin:'3px 0 0' }}>
                           ⚠️ Duplicate enrollment in your team

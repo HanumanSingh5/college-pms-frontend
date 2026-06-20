@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useLocation } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
 import { toast } from 'react-toastify';
@@ -21,6 +22,7 @@ const PHASES = [
 ];
 
 export default function FacultyTasks() {
+  const location = useLocation();
   const [tasks, setTasks]         = useState([]);
   const [lateTasks, setLateTasks] = useState([]);
   const [projects, setProjects]   = useState([]);
@@ -29,6 +31,8 @@ export default function FacultyTasks() {
   const [editModal, setEditModal] = useState(null);
   const [viewTask, setViewTask]   = useState(null);
   const [filterPhase, setFilterPhase] = useState('all');
+  // 'all' | 'pending' | 'completed' — set from Dashboard stat-card clicks via navigation state
+  const [filterStatus, setFilterStatus] = useState('all');
   const [form, setForm] = useState({ title:'', description:'', phase:'', projectId:'', dueDate:'' });
   const [editForm, setEditForm] = useState({ title:'', description:'', dueDate:'', status:'' });
   const token = localStorage.getItem('token');
@@ -41,6 +45,16 @@ export default function FacultyTasks() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // Pick up the status filter passed from the Dashboard's stat cards
+  // (Assigned Projects card stays on Dashboard; Tasks/Pending/Completed land here).
+  useEffect(() => {
+    const incoming = location.state?.statusFilter;
+    if (incoming) {
+      setTab('all');
+      setFilterStatus(incoming); // 'all' | 'pending' | 'completed'
+    }
+  }, [location.state]);
 
   const openModal = () => {
     setForm({ title:'', description:'', phase:'', projectId:'', dueDate:'' });
@@ -109,7 +123,15 @@ export default function FacultyTasks() {
 
   const isOverdue = (dueDate) => dueDate && new Date(dueDate) < new Date();
 
-  const filtered = filterPhase === 'all' ? tasks : tasks.filter(t => t.phase === filterPhase);
+  // Apply phase filter first, then status filter (pending/completed treat
+  // 'in-progress' and 'late' as part of "pending" since they aren't done yet).
+  const phaseFiltered = filterPhase === 'all' ? tasks : tasks.filter(t => t.phase === filterPhase);
+  const filtered = phaseFiltered.filter(t => {
+    if (filterStatus === 'all') return true;
+    if (filterStatus === 'completed') return t.status === 'completed';
+    if (filterStatus === 'pending') return t.status !== 'completed';
+    return true;
+  });
 
   const grouped = {};
   filtered.forEach(t => {
@@ -124,6 +146,12 @@ export default function FacultyTasks() {
     background:'none', cursor:'pointer',
     fontWeight: tab === t ? 600 : 400,
     color: tab === t ? '#4f46e5' : '#666', fontSize:14,
+  });
+
+  const statusFilterStyle = (s) => ({
+    padding:'6px 14px', borderRadius:8, fontSize:12, border:'1px solid #d1d5db', cursor:'pointer',
+    background: filterStatus === s ? '#16a34a' : 'white',
+    color: filterStatus === s ? 'white' : '#555',
   });
 
   return (
@@ -148,6 +176,13 @@ export default function FacultyTasks() {
 
           {tab === 'all' && (
             <>
+              {/* Status filter (Pending / Completed / All) — driven by Dashboard stat-card clicks, also clickable here */}
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:10 }}>
+                <button type="button" onClick={() => setFilterStatus('all')} style={statusFilterStyle('all')}>All Status</button>
+                <button type="button" onClick={() => setFilterStatus('pending')} style={statusFilterStyle('pending')}>⏳ Pending</button>
+                <button type="button" onClick={() => setFilterStatus('completed')} style={statusFilterStyle('completed')}>✅ Completed</button>
+              </div>
+
               <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:16 }}>
                 <button type="button" onClick={() => setFilterPhase('all')}
                   style={{ padding:'6px 14px', borderRadius:8, fontSize:12, border:'1px solid #d1d5db', cursor:'pointer', background:filterPhase==='all'?'#4f46e5':'white', color:filterPhase==='all'?'white':'#555' }}>
@@ -164,8 +199,8 @@ export default function FacultyTasks() {
               {Object.keys(grouped).length === 0 && (
                 <div className="card" style={{ textAlign:'center', color:'#888', padding:40 }}>
                   <div style={{ fontSize:48, marginBottom:12 }}>📋</div>
-                  <h3>No Tasks Yet</h3>
-                  <p>Click "+ Assign New Task" to assign tasks to groups.</p>
+                  <h3>No Tasks Found</h3>
+                  <p>Try a different filter, or click "+ Assign New Task" to assign one.</p>
                 </div>
               )}
 

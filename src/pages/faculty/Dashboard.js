@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
 import { toast } from 'react-toastify';
@@ -21,6 +22,7 @@ export default function FacultyDashboard() {
   const [finalizing, setFinalizing]   = useState(false);
   const token = localStorage.getItem('token');
   const h = { headers: { Authorization: 'Bearer ' + token } };
+  const navigate = useNavigate();
 
   const load = () => {
     axios.get(`${API}/api/faculty/stats`,    h).then(r => setStats(r.data));
@@ -67,6 +69,13 @@ export default function FacultyDashboard() {
     color: tab===t ? '#4f46e5' : '#666', fontSize:14,
   });
 
+  // Clicking a stat card jumps to the most relevant view.
+  // Projects stat -> "My Projects" tab on this page.
+  // Task-related stats -> the Manage Tasks page, passing a status filter
+  // via navigation state so that page can pre-filter if it supports it.
+  const goToProjects = () => setTab('projects');
+  const goToTasks = (status) => navigate('/faculty/tasks', { state: { statusFilter: status } });
+
   return (
     <div>
       <Navbar title="Faculty Portal" />
@@ -75,10 +84,46 @@ export default function FacultyDashboard() {
         <div className="main-content">
 
           <div className="stats-grid" style={{ marginBottom:24 }}>
-            <div className="stat-card"><h3>{stats.projects||0}</h3><p>Assigned Projects</p></div>
-            <div className="stat-card"><h3>{stats.tasks||0}</h3><p>Tasks Assigned</p></div>
-            <div className="stat-card"><h3>{stats.pending||0}</h3><p>Pending</p></div>
-            <div className="stat-card"><h3>{stats.completed||0}</h3><p>Completed</p></div>
+            <div
+              className="stat-card"
+              onClick={goToProjects}
+              role="button"
+              tabIndex={0}
+              style={{ cursor:'pointer' }}
+              title="View assigned projects"
+            >
+              <h3>{stats.projects||0}</h3><p>Assigned Projects</p>
+            </div>
+            <div
+              className="stat-card"
+              onClick={() => goToTasks('all')}
+              role="button"
+              tabIndex={0}
+              style={{ cursor:'pointer' }}
+              title="View all assigned tasks"
+            >
+              <h3>{stats.tasks||0}</h3><p>Tasks Assigned</p>
+            </div>
+            <div
+              className="stat-card"
+              onClick={() => goToTasks('pending')}
+              role="button"
+              tabIndex={0}
+              style={{ cursor:'pointer' }}
+              title="View pending tasks"
+            >
+              <h3>{stats.pending||0}</h3><p>Pending</p>
+            </div>
+            <div
+              className="stat-card"
+              onClick={() => goToTasks('completed')}
+              role="button"
+              tabIndex={0}
+              style={{ cursor:'pointer' }}
+              title="View completed tasks"
+            >
+              <h3>{stats.completed||0}</h3><p>Completed</p>
+            </div>
           </div>
 
           <div style={{ borderBottom:'1px solid #e5e7eb', marginBottom:20, display:'flex', gap:4 }}>

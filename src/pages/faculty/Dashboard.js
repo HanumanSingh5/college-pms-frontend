@@ -135,23 +135,47 @@ export default function FacultyDashboard() {
 
           {tab==='students' && (
             <div className="card" style={{ overflowX:'auto' }}>
-              <table style={{ minWidth:800 }}>
-                <thead><tr><th>#</th><th>Group</th><th>Name</th><th>Enrollment</th><th>Class</th><th>Email</th><th>Mobile</th></tr></thead>
+              <table style={{ minWidth:900 }}>
+                <thead><tr><th>#</th><th>Group</th><th>Name</th><th>Enrollment</th><th>Class</th><th>Email</th><th>Mobile</th><th>Role</th></tr></thead>
                 <tbody>
-                  {projects.flatMap((p, pi) =>
-                    (p.students||[]).map((s, si) => (
-                      <tr key={p._id+s._id}>
-                        <td>{pi*10+si+1}</td>
-                        <td><span style={{ background:'#eff6ff', color:'#1d4ed8', padding:'2px 8px', borderRadius:20, fontSize:12 }}>{p.groupNo||'-'}</span></td>
-                        <td><strong>{s.name}</strong></td>
-                        <td>{s.enrollment||'-'}</td>
-                        <td>{s.studentClass||'-'}</td>
-                        <td style={{ fontSize:13 }}>{s.email}</td>
-                        <td>{s.mobile||'-'}</td>
-                      </tr>
-                    ))
-                  )}
-                  {projects.length===0&&<tr><td colSpan="7" style={{ textAlign:'center', color:'#888', padding:24 }}>No students</td></tr>}
+                  {projects.flatMap((p, pi) => {
+                    const rows = [];
+                    let counter = 0;
+                    (p.students || []).forEach((s) => {
+                      counter++;
+                      // Team leader row (the registered account)
+                      rows.push(
+                        <tr key={p._id + s._id + '-leader'}>
+                          <td>{pi * 100 + counter}</td>
+                          <td><span style={{ background:'#eff6ff', color:'#1d4ed8', padding:'2px 8px', borderRadius:20, fontSize:12 }}>{p.groupNo || '-'}</span></td>
+                          <td><strong>{s.name}</strong></td>
+                          <td>{s.enrollment || '-'}</td>
+                          <td>{s.studentClass || '-'}</td>
+                          <td style={{ fontSize:13 }}>{s.email}</td>
+                          <td>{s.mobile || '-'}</td>
+                          <td><span style={{ background:'#ede9fe', color:'#5b21b6', padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:600 }}>Team Leader</span></td>
+                        </tr>
+                      );
+                      // Other team members added by the leader
+                      (s.teamMembers || []).forEach((tm, ti) => {
+                        counter++;
+                        rows.push(
+                          <tr key={p._id + s._id + '-tm-' + ti} style={{ background:'#fafafa' }}>
+                            <td>{pi * 100 + counter}</td>
+                            <td><span style={{ background:'#eff6ff', color:'#1d4ed8', padding:'2px 8px', borderRadius:20, fontSize:12 }}>{p.groupNo || '-'}</span></td>
+                            <td>{tm.name}</td>
+                            <td>{tm.enrollment || '-'}</td>
+                            <td>{tm.studentClass || '-'}</td>
+                            <td style={{ fontSize:13 }}>{tm.email}</td>
+                            <td>{tm.mobile || '-'}</td>
+                            <td><span style={{ background:'#f3f4f6', color:'#555', padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:600 }}>Member</span></td>
+                          </tr>
+                        );
+                      });
+                    });
+                    return rows;
+                  })}
+                  {projects.length===0 && <tr><td colSpan="8" style={{ textAlign:'center', color:'#888', padding:24 }}>No students</td></tr>}
                 </tbody>
               </table>
             </div>

@@ -54,6 +54,7 @@ export default function AdminStudents() {
     try {
       const res = await axios.post(
         `${API}/api/admin/invite-student`,
+        {},
         h
       );
       // Replace localhost in the returned link with the live URL

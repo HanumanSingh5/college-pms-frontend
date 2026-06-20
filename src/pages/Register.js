@@ -3,8 +3,18 @@ import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
-const isValidEmail  = (email)  => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-const isValidMobile = (mobile) => /^[6-9]\d{9}$/.test(mobile);
+const isValidEmail = (email) => {
+  const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!re.test(email)) return false;
+  const lower = email.toLowerCase();
+  if (lower.startsWith('test@') || lower.startsWith('abc@') || lower.startsWith('xyz@') || lower.startsWith('a@'))
+    return false;
+  return true;
+};
+const isValidMobile     = (mobile)     => /^[6-9]\d{9}$/.test(mobile);
+const isValidEnrollment = (enrollment) => /^\d{1,14}$/.test(enrollment);
+
+const CLASS_OPTIONS = ['CE', 'IT', 'AIML', 'CC', 'GA', 'CSE'];
 
 export default function Register() {
   const { token } = useParams();
@@ -40,13 +50,16 @@ export default function Register() {
       return toast.error('Full name is required');
 
     if (!form.email.trim() || !isValidEmail(form.email))
-      return toast.error('Enter a valid email address');
+      return toast.error('Enter a valid, real email address');
 
     if (!form.enrollment.trim())
       return toast.error('Enrollment number is required');
 
+    if (!isValidEnrollment(form.enrollment.trim()))
+      return toast.error('Enrollment number must contain only digits (max 14 numbers)');
+
     if (!form.studentClass.trim())
-      return toast.error('Class is required');
+      return toast.error('Please select your class');
 
     if (!form.mobile.trim())
       return toast.error('Mobile number is required');
@@ -126,25 +139,41 @@ export default function Register() {
                 style={{ border: form.email && !isValidEmail(form.email) ? '1px solid #dc2626' : '' }} />
               {form.email && !isValidEmail(form.email) && (
                 <p style={{ color: '#dc2626', fontSize: 11, margin: '3px 0 0' }}>
-                  ⚠️ Enter a valid email address
+                  ⚠️ Enter a valid, real email address
                 </p>
               )}
             </div>
 
             <div className="form-group">
-              <label>Enrollment Number *</label>
-              <input type="text" placeholder="e.g. 21CS001"
+              <label>Enrollment Number * (numbers only, max 14)</label>
+              <input type="text" placeholder="e.g. 24012250910002"
                 value={form.enrollment}
-                onChange={e => setForm({ ...form, enrollment: e.target.value })}
-                required />
+                onChange={e => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 14);
+                  setForm({ ...form, enrollment: val });
+                }}
+                maxLength={14}
+                required
+                style={{ border: form.enrollment && !isValidEnrollment(form.enrollment) ? '1px solid #dc2626' : '' }} />
+              {form.enrollment && !isValidEnrollment(form.enrollment) && (
+                <p style={{ color: '#dc2626', fontSize: 11, margin: '3px 0 0' }}>
+                  ⚠️ Numbers only, maximum 14 digits
+                </p>
+              )}
             </div>
 
             <div className="form-group">
               <label>Class *</label>
-              <input type="text" placeholder="e.g. TY-B, SY-A"
+              <select
                 value={form.studentClass}
                 onChange={e => setForm({ ...form, studentClass: e.target.value })}
-                required />
+                required
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, outline: 'none', boxSizing: 'border-box', background: 'white' }}>
+                <option value="">-- Select Class --</option>
+                {CLASS_OPTIONS.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
             </div>
 
             <div className="form-group">

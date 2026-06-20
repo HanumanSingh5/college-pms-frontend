@@ -213,16 +213,10 @@ export default function AdminStudents() {
 
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
             <h2>Students ({students.length})</h2>
-            <div style={{ display:'flex', gap:10 }}>
-              <button type="button" className="btn btn-primary"
-                onClick={() => setShowInviteModal(true)}>
-                + Single Invite
-              </button>
-              <button type="button" className="btn btn-success"
-                onClick={() => setShowExcelModal(true)}>
-                📊 Upload Excel
-              </button>
-            </div>
+            <button type="button" className="btn btn-primary"
+              onClick={() => setShowInviteModal(true)}>
+              + Invite Students
+            </button>
           </div>
 
           <div style={{

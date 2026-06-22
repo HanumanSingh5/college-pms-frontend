@@ -27,7 +27,7 @@ const isValidEmail = (email) => {
   return true;
 };
 const isValidMobile = (mobile) => /^[6-9]\d{9}$/.test(mobile);
-const isValidEnrollment = (enrollment) => /^\d{1,14}$/.test(enrollment);
+const isValidEnrollment = (enrollment) => /^\d{14}$/.test(enrollment);
 
 export default function StudentTeam() {
   const [profile, setProfile]   = useState(null);
@@ -270,7 +270,7 @@ export default function StudentTeam() {
                     </div>
                     <div>
                       <label style={{ display:'block', marginBottom:4, fontSize:13, fontWeight:500 }}>
-                        Enrollment Number * (numbers only, max 14)
+                        Enrollment Number * (exactly 14 digits)
                       </label>
                       <input type="text" placeholder="e.g. 24012250910002"
                         value={member.enrollment}
@@ -289,7 +289,7 @@ export default function StudentTeam() {
                         }} />
                       {member.enrollment && !isValidEnrollment(member.enrollment) && (
                         <p style={{ color:'#dc2626', fontSize:11, margin:'3px 0 0' }}>
-                          ⚠️ Numbers only, maximum 14 digits
+                          ⚠️ Must be exactly 14 digits
                         </p>
                       )}
                       {enrollDup && (

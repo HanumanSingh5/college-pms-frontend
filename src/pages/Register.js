@@ -12,7 +12,7 @@ const isValidEmail = (email) => {
   return true;
 };
 const isValidMobile     = (mobile)     => /^[6-9]\d{9}$/.test(mobile);
-const isValidEnrollment = (enrollment) => /^\d{1,14}$/.test(enrollment);
+const isValidEnrollment = (enrollment) => /^\d{14}$/.test(enrollment);
 
 const CLASS_OPTIONS = ['CE', 'IT', 'AIML', 'CC', 'GA', 'CSE'];
 
@@ -197,8 +197,8 @@ export default function Register() {
             </div>
 
             <div className="form-group">
-              <label>Enrollment Number * (numbers only, max 14)</label>
-              <input type="text" placeholder="e.g. 24012250910002"
+              <label>Enrollment Number * (exactly 14 digits)</label>
+              <input type="text" placeholder="Enter exactly 14 digits"
                 value={form.enrollment}
                 onChange={e => {
                   const val = e.target.value.replace(/\D/g, '').slice(0, 14);
@@ -210,7 +210,7 @@ export default function Register() {
                 style={{ border: form.enrollment && !isValidEnrollment(form.enrollment) ? '1px solid #dc2626' : '' }} />
               {form.enrollment && !isValidEnrollment(form.enrollment) && (
                 <p style={{ color: '#dc2626', fontSize: 11, margin: '3px 0 0' }}>
-                  ⚠️ Numbers only, maximum 14 digits
+                  ⚠️ Enrollment number must be exactly 14 digits
                 </p>
               )}
             </div>

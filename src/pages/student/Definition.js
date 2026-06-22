@@ -13,12 +13,16 @@ const links = [
   { path: '/student/tasks',      label: 'My Tasks',    icon: '✅' },
 ];
 
+const MIN_WORDS = 50;
 const emptyDef = { title:'', description:'', frontend:'', backend:'' };
 
+const countWords = (text) =>
+  text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+
 export default function StudentDefinition() {
-  const [project, setProject]         = useState(null);
+  const [project,     setProject]     = useState(null);
   const [definitions, setDefinitions] = useState([{ ...emptyDef }]);
-  const [submitting, setSubmitting]   = useState(false);
+  const [submitting,  setSubmitting]  = useState(false);
   const token = localStorage.getItem('token');
   const h = { headers: { Authorization: `Bearer ${token}` } };
 
@@ -57,9 +61,26 @@ export default function StudentDefinition() {
   const submit = async (e) => {
     e.preventDefault();
     for (let i = 0; i < definitions.length; i++) {
-      if (!definitions[i].title || !definitions[i].description)
-        return toast.error('Definition ' + (i+1) + ': Title and Description are required');
+      const d   = definitions[i];
+      const num = i + 1;
+
+      if (!d.title.trim())
+        return toast.error(`Definition ${num}: Project Title is required`);
+
+      if (!d.frontend.trim())
+        return toast.error(`Definition ${num}: Frontend Technology is required`);
+
+      if (!d.backend.trim())
+        return toast.error(`Definition ${num}: Backend Technology is required`);
+
+      if (!d.description.trim())
+        return toast.error(`Definition ${num}: Project Description is required`);
+
+      const words = countWords(d.description);
+      if (words < MIN_WORDS)
+        return toast.error(`Definition ${num}: Description must be at least ${MIN_WORDS} words (currently ${words} word${words !== 1 ? 's' : ''})`);
     }
+
     setSubmitting(true);
     try {
       await axios.post(`${API}/api/student/submit-definitions`, { definitions }, h);
@@ -72,6 +93,7 @@ export default function StudentDefinition() {
     }
   };
 
+  // ── NO PROJECT ──
   if (!project) {
     return (
       <div>
@@ -90,6 +112,7 @@ export default function StudentDefinition() {
     );
   }
 
+  // ── FINALIZED VIEW ──
   if (project.definitionStatus === 'finalized') {
     return (
       <div>
@@ -98,13 +121,11 @@ export default function StudentDefinition() {
           <Sidebar links={links} />
           <div className="main-content">
             <h2 style={{ marginBottom:20 }}>Project Definitions</h2>
-
             <div style={{ background:'linear-gradient(135deg, #16a34a, #15803d)', borderRadius:16, padding:'24px 28px', marginBottom:24, color:'white', textAlign:'center' }}>
               <div style={{ fontSize:48, marginBottom:8 }}>🎉</div>
               <h2 style={{ margin:'0 0 8px', color:'white' }}>Definition Finalized!</h2>
-              <p style={{ margin:0, opacity:0.9 }}>Your faculty has selected and finalized the project definition. You can now start working on your project!</p>
+              <p style={{ margin:0, opacity:0.9 }}>Your faculty has selected and finalized the project definition.</p>
             </div>
-
             {project.finalDefinition && (
               <div style={{ background:'white', border:'3px solid #16a34a', borderRadius:16, padding:24, marginBottom:20, boxShadow:'0 4px 20px rgba(22,163,74,0.15)' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
@@ -114,7 +135,6 @@ export default function StudentDefinition() {
                 <p style={{ color:'#333', fontSize:15, lineHeight:1.8, margin:0 }}>{project.finalDefinition}</p>
               </div>
             )}
-
             <h3 style={{ marginBottom:16, color:'#555' }}>All Your Submitted Definitions:</h3>
             {project.definitions?.map((d, i) => (
               <div key={i} style={{ border:project.selectedDefinition===i?'2px solid #16a34a':'1px solid #e5e7eb', borderRadius:12, padding:20, marginBottom:12, background:project.selectedDefinition===i?'#f0fdf4':'#fafafa', position:'relative' }}>
@@ -136,6 +156,7 @@ export default function StudentDefinition() {
     );
   }
 
+  // ── SUBMIT FORM ──
   return (
     <div>
       <Navbar title="Student Portal" />
@@ -148,57 +169,154 @@ export default function StudentDefinition() {
               <h2 style={{ margin:0 }}>Project Definitions</h2>
               <p style={{ color:'#888', fontSize:14, margin:'4px 0 0' }}>Submit up to 5 project ideas. Faculty will select and finalize one.</p>
             </div>
-            <button type="button" className="btn btn-primary" onClick={addDef} disabled={definitions.length>=5}>+ Add Definition</button>
+            <button type="button" className="btn btn-primary" onClick={addDef} disabled={definitions.length >= 5}>
+              + Add Definition
+            </button>
           </div>
 
-          {project.definitionStatus==='submitted' && (
+          {project.definitionStatus === 'submitted' && (
             <div style={{ background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:10, padding:'12px 16px', marginBottom:20, fontSize:13, color:'#1e40af' }}>
               📤 <strong>Submitted!</strong> Your definitions are under review by faculty. You can still update them until faculty finalizes.
             </div>
           )}
 
           <div style={{ background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:10, padding:'12px 16px', marginBottom:20, fontSize:13, color:'#166534' }}>
-            <strong>Instructions:</strong> Add up to 5 different project ideas. Each definition should have a clear title and description. Faculty will review all definitions and finalize one.
+            <strong>Instructions:</strong> All fields are required. Description must be at least <strong>{MIN_WORDS} words</strong>. Add up to 5 different project ideas — Faculty will review all and finalize one.
           </div>
 
           <form onSubmit={submit}>
-            {definitions.map((def, i) => (
-              <div key={i} className="card" style={{ marginBottom:16 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-                  <h4 style={{ margin:0, color:'#4f46e5' }}>
-                    📄 Definition {i+1}
-                    {i===0&&definitions.length>1&&<span style={{ background:'#ede9fe', color:'#5b21b6', fontSize:11, padding:'2px 8px', borderRadius:20, marginLeft:8, fontWeight:400 }}>Primary</span>}
-                  </h4>
-                  {definitions.length>1&&<button type="button" className="btn btn-danger" onClick={() => removeDef(i)} style={{ padding:'4px 10px', fontSize:12 }}>Remove</button>}
-                </div>
+            {definitions.map((def, i) => {
+              const wordCount  = countWords(def.description);
+              const wordOk     = wordCount >= MIN_WORDS;
+              const wordColor  = wordCount === 0 ? '#94a3b8' : wordOk ? '#16a34a' : '#dc2626';
+              const wordBg     = wordCount === 0 ? '#f1f5f9' : wordOk ? '#d1fae5' : '#fee2e2';
+              const progress   = Math.min(100, Math.round((wordCount / MIN_WORDS) * 100));
 
-                <div style={{ marginBottom:12 }}>
-                  <label style={{ display:'block', marginBottom:4, fontSize:13, fontWeight:500 }}>Project Title *</label>
-                  <input type="text" placeholder="e.g. Online Library Management System" value={def.title} onChange={e => updateDef(i,'title',e.target.value)} required style={{ width:'100%', padding:'9px 12px', border:'1px solid #d1d5db', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
-                </div>
-
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
-                  <div>
-                    <label style={{ display:'block', marginBottom:4, fontSize:13, fontWeight:500 }}>Frontend Technology</label>
-                    <input type="text" placeholder="e.g. React, HTML/CSS" value={def.frontend} onChange={e => updateDef(i,'frontend',e.target.value)} style={{ width:'100%', padding:'9px 12px', border:'1px solid #d1d5db', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
+              return (
+                <div key={i} className="card" style={{ marginBottom:20, border: '1px solid #e5e7eb' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+                    <h4 style={{ margin:0, color:'#4f46e5' }}>
+                      📄 Definition {i + 1}
+                      {i === 0 && definitions.length > 1 && (
+                        <span style={{ background:'#ede9fe', color:'#5b21b6', fontSize:11, padding:'2px 8px', borderRadius:20, marginLeft:8, fontWeight:400 }}>Primary</span>
+                      )}
+                    </h4>
+                    {definitions.length > 1 && (
+                      <button type="button" className="btn btn-danger" onClick={() => removeDef(i)} style={{ padding:'4px 10px', fontSize:12 }}>Remove</button>
+                    )}
                   </div>
+
+                  {/* Project Title */}
+                  <div style={{ marginBottom:14 }}>
+                    <label style={{ display:'block', marginBottom:4, fontSize:13, fontWeight:600 }}>
+                      Project Title *
+                    </label>
+                    <input type="text"
+                      placeholder="e.g. Online Library Management System"
+                      value={def.title}
+                      onChange={e => updateDef(i, 'title', e.target.value)}
+                      required
+                      style={{
+                        width:'100%', padding:'10px 12px',
+                        border: def.title.trim() ? '1px solid #10b981' : '1px solid #d1d5db',
+                        borderRadius:8, fontSize:14, boxSizing:'border-box', outline:'none'
+                      }} />
+                    {!def.title.trim() && (
+                      <p style={{ color:'#dc2626', fontSize:11, margin:'3px 0 0' }}>⚠️ Required</p>
+                    )}
+                  </div>
+
+                  {/* Frontend + Backend */}
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14 }}>
+                    <div>
+                      <label style={{ display:'block', marginBottom:4, fontSize:13, fontWeight:600 }}>
+                        Frontend Technology *
+                      </label>
+                      <input type="text"
+                        placeholder="e.g. React, HTML/CSS"
+                        value={def.frontend}
+                        onChange={e => updateDef(i, 'frontend', e.target.value)}
+                        required
+                        style={{
+                          width:'100%', padding:'10px 12px',
+                          border: def.frontend.trim() ? '1px solid #10b981' : '1px solid #d1d5db',
+                          borderRadius:8, fontSize:14, boxSizing:'border-box', outline:'none'
+                        }} />
+                      {!def.frontend.trim() && (
+                        <p style={{ color:'#dc2626', fontSize:11, margin:'3px 0 0' }}>⚠️ Required</p>
+                      )}
+                    </div>
+                    <div>
+                      <label style={{ display:'block', marginBottom:4, fontSize:13, fontWeight:600 }}>
+                        Backend Technology *
+                      </label>
+                      <input type="text"
+                        placeholder="e.g. Node.js, Django"
+                        value={def.backend}
+                        onChange={e => updateDef(i, 'backend', e.target.value)}
+                        required
+                        style={{
+                          width:'100%', padding:'10px 12px',
+                          border: def.backend.trim() ? '1px solid #10b981' : '1px solid #d1d5db',
+                          borderRadius:8, fontSize:14, boxSizing:'border-box', outline:'none'
+                        }} />
+                      {!def.backend.trim() && (
+                        <p style={{ color:'#dc2626', fontSize:11, margin:'3px 0 0' }}>⚠️ Required</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Description */}
                   <div>
-                    <label style={{ display:'block', marginBottom:4, fontSize:13, fontWeight:500 }}>Backend Technology</label>
-                    <input type="text" placeholder="e.g. Node.js, Django" value={def.backend} onChange={e => updateDef(i,'backend',e.target.value)} style={{ width:'100%', padding:'9px 12px', border:'1px solid #d1d5db', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                      <label style={{ fontSize:13, fontWeight:600 }}>
+                        Project Description * <span style={{ color:'#6b7280', fontWeight:400 }}>(minimum {MIN_WORDS} words)</span>
+                      </label>
+                      <span style={{ background: wordBg, color: wordColor, fontSize:12, fontWeight:700, padding:'3px 10px', borderRadius:20 }}>
+                        {wordCount} / {MIN_WORDS} words {wordOk ? '✅' : ''}
+                      </span>
+                    </div>
+
+                    <textarea rows="5"
+                      placeholder={`Describe your project in detail — what problem it solves, main features, target users, technologies used... (minimum ${MIN_WORDS} words)`}
+                      value={def.description}
+                      onChange={e => updateDef(i, 'description', e.target.value)}
+                      required
+                      style={{
+                        width:'100%', padding:'10px 12px',
+                        border: def.description && !wordOk ? '1px solid #dc2626' : wordOk ? '1px solid #10b981' : '1px solid #d1d5db',
+                        borderRadius:8, fontSize:14, lineHeight:1.7,
+                        boxSizing:'border-box', outline:'none', resize:'vertical'
+                      }} />
+
+                    {/* Word count progress bar */}
+                    <div style={{ marginTop:6 }}>
+                      <div style={{ height:4, background:'#e5e7eb', borderRadius:4, overflow:'hidden' }}>
+                        <div style={{
+                          height:'100%', borderRadius:4, transition:'width 0.3s, background 0.3s',
+                          width:`${progress}%`,
+                          background: progress < 50 ? '#ef4444' : progress < 80 ? '#f59e0b' : '#10b981'
+                        }} />
+                      </div>
+                      {def.description && !wordOk && (
+                        <p style={{ color:'#dc2626', fontSize:11, margin:'4px 0 0' }}>
+                          ⚠️ Need {MIN_WORDS - wordCount} more word{MIN_WORDS - wordCount !== 1 ? 's' : ''} to meet the minimum requirement
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
+              );
+            })}
 
-                <div>
-                  <label style={{ display:'block', marginBottom:4, fontSize:13, fontWeight:500 }}>Project Description *</label>
-                  <textarea rows="4" placeholder="Describe your project in detail — what problem it solves, main features, target users..." value={def.description} onChange={e => updateDef(i,'description',e.target.value)} required style={{ width:'100%', padding:'9px 12px', border:'1px solid #d1d5db', borderRadius:8, fontSize:14, lineHeight:1.6, boxSizing:'border-box' }} />
-                </div>
-              </div>
-            ))}
-
-            <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-              {definitions.length<5&&<button type="button" className="btn btn-primary" onClick={addDef} style={{ padding:'10px 20px' }}>+ Add Another</button>}
+            <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:8 }}>
+              {definitions.length < 5 && (
+                <button type="button" className="btn btn-primary" onClick={addDef} style={{ padding:'10px 20px' }}>
+                  + Add Another
+                </button>
+              )}
               <button type="submit" className="btn btn-success" disabled={submitting} style={{ padding:'10px 28px', fontSize:15 }}>
-                {submitting?'Submitting...':'📤 Submit Definitions'}
+                {submitting ? 'Submitting...' : '📤 Submit Definitions'}
               </button>
             </div>
           </form>

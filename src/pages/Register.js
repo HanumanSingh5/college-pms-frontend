@@ -1,234 +1,126 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useParams, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+const router = require('express').Router();
+const bcrypt = require('bcryptjs');
+const jwt    = require('jsonwebtoken');
+const User   = require('../models/User');
+const Invite = require('../models/Invite');
 
-const isValidEmail = (email) => {
-  const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-  if (!re.test(email)) return false;
-  const lower = email.toLowerCase();
-  if (lower.startsWith('test@') || lower.startsWith('abc@') || lower.startsWith('xyz@') || lower.startsWith('a@'))
-    return false;
-  return true;
-};
-const isValidMobile     = (mobile)     => /^[6-9]\d{9}$/.test(mobile);
-const isValidEnrollment = (enrollment) => /^\d{1,14}$/.test(enrollment);
+const JWT_SECRET = process.env.JWT_SECRET || 'mysecretkey123_college_pms_2024';
 
-const CLASS_OPTIONS = ['CE', 'IT', 'AIML', 'CC', 'GA', 'CSE'];
+// Login
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ msg: 'User not found' });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ msg: 'Invalid credentials' });
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    res.json({ token, role: user.role, name: user.name, id: user._id });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+});
 
-export default function Register() {
-  const { token } = useParams();
-  const navigate  = useNavigate();
-  const [valid, setValid]   = useState(false);
-  const [error, setError]   = useState('');
-  const [form, setForm]     = useState({
-    name:            '',
-    email:           '',
-    password:        '',
-    confirmPassword: '',
-    enrollment:      '',
-    studentClass:    '',
-    mobile:          '',
-  });
+// Check invite token validity
+router.get('/invite/:token', async (req, res) => {
+  try {
+    const invite = await Invite.findOne({ token: req.params.token });
+    if (!invite) return res.status(400).json({ msg: 'Invalid registration link.' });
 
-  useEffect(() => {
-    axios.get(`${process.env.REACT_APP_API_URL}/api/auth/invite/${token}`)
-      .then(res => {
-        if (res.data.role === 'faculty') {
-          setError('Faculty accounts are created by admin. Contact your administrator for login credentials.');
-          return;
-        }
-        setValid(true);
-      })
-      .catch(() => setError('Invalid or expired registration link.'));
-  }, [token]);
+    // Check expiry
+    if (invite.expiresAt && new Date() > new Date(invite.expiresAt))
+      return res.status(400).json({ msg: 'This registration link has expired. Ask admin for a new one.' });
 
-  const submit = async (e) => {
-    e.preventDefault();
+    // Check max uses
+    if (invite.usedCount >= invite.maxUses)
+      return res.status(400).json({ msg: 'This registration link has reached its maximum uses.' });
 
-    if (!form.name.trim())
-      return toast.error('Full name is required');
+    res.json({ role: invite.role });
+  } catch {
+    res.status(500).json({ msg: 'Server error' });
+  }
+});
 
-    if (!form.email.trim() || !isValidEmail(form.email))
-      return toast.error('Enter a valid, real email address');
+// Student self-registration — multiple students can use the same link concurrently
+router.post('/register/:token', async (req, res) => {
+  try {
+    const invite = await Invite.findOne({ token: req.params.token });
+    if (!invite) return res.status(400).json({ msg: 'Invalid registration link.' });
 
-    if (!form.enrollment.trim())
-      return toast.error('Enrollment number is required');
+    // Check expiry
+    if (invite.expiresAt && new Date() > new Date(invite.expiresAt))
+      return res.status(400).json({ msg: 'This registration link has expired. Ask your admin for a new one.' });
 
-    if (!isValidEnrollment(form.enrollment.trim()))
-      return toast.error('Enrollment number must contain only digits (max 14 numbers)');
+    // Check max uses
+    if (invite.usedCount >= invite.maxUses)
+      return res.status(400).json({ msg: 'This registration link has reached its limit. Ask admin for a new one.' });
 
-    if (!form.studentClass.trim())
-      return toast.error('Please select your class');
+    if (invite.role === 'faculty')
+      return res.status(403).json({ msg: 'Faculty accounts are created by admin only.' });
 
-    if (!form.mobile.trim())
-      return toast.error('Mobile number is required');
+    const { name, email, password, enrollment, studentClass, mobile } = req.body;
 
-    if (!isValidMobile(form.mobile))
-      return toast.error('Enter a valid 10-digit mobile number (must start with 6, 7, 8 or 9)');
+    const isValidEmail = (e) => /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(e);
+    const isValidEnrollment = (en) => /^\d{1,14}$/.test(en);
+    const isStrongPassword = (p) =>
+      p && p.length >= 8 &&
+      /[A-Z]/.test(p) && /[a-z]/.test(p) &&
+      /[0-9]/.test(p) && /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(p);
 
-    if (!form.password)
-      return toast.error('Password is required');
+    if (!email || !isValidEmail(email))
+      return res.status(400).json({ msg: 'Enter a valid, real email address' });
 
-    if (form.password.length < 6)
-      return toast.error('Password must be at least 6 characters');
+    if (!password || !isStrongPassword(password))
+      return res.status(400).json({ msg: 'Password must be at least 8 characters with uppercase, lowercase, number and special character (!@#$ etc.)' });
 
-    if (form.password !== form.confirmPassword)
-      return toast.error('Passwords do not match');
+    if (!enrollment || !enrollment.trim())
+      return res.status(400).json({ msg: 'Enrollment number is required' });
 
-    try {
-      const res = await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/auth/register/${token}`,
-        {
-          name:         form.name,
-          email:        form.email,
-          password:     form.password,
-          enrollment:   form.enrollment,
-          studentClass: form.studentClass,
-          mobile:       form.mobile,
-        }
-      );
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('role',  res.data.role);
-      localStorage.setItem('name',  res.data.name);
-      localStorage.setItem('id',    res.data.id);
-      toast.success('Registration successful!');
-      navigate('/student');
-    } catch (err) {
-      toast.error(err.response?.data?.msg || 'Registration failed');
-    }
-  };
+    const enrollmentDigits = enrollment.trim().replace(/\D/g, '');
+    if (!isValidEnrollment(enrollmentDigits))
+      return res.status(400).json({ msg: 'Enrollment number must contain only digits (max 14 numbers)' });
 
-  return (
-    <div className="login-page">
-      <div className="login-box" style={{ maxWidth: 460 }}>
-        <h2>🎓 Student Registration</h2>
-        <p style={{ textAlign: 'center', color: '#888', marginBottom: 20 }}>
-          College Project Management System
-        </p>
+    // Check email not already taken
+    const existingEmail = await User.findOne({ email: email.toLowerCase().trim() });
+    if (existingEmail)
+      return res.status(400).json({ msg: 'An account with this email already exists. Try logging in.' });
 
-        {error && (
-          <div style={{ background: '#fee2e2', color: '#dc2626', padding: '12px 16px', borderRadius: 8, marginBottom: 16, fontSize: 14, textAlign: 'center' }}>
-            ⚠️ {error}
-          </div>
-        )}
+    // Check enrollment not already taken
+    const existingEnrollment = await User.findOne({
+      enrollment: enrollmentDigits,
+      role: 'student'
+    });
+    if (existingEnrollment)
+      return res.status(400).json({ msg: 'Enrollment number "' + enrollmentDigits + '" is already registered.' });
 
-        {!error && !valid && (
-          <p style={{ textAlign: 'center', color: '#888' }}>
-            Verifying your registration link...
-          </p>
-        )}
+    const hashed = await bcrypt.hash(password, 10);
+    const user = await User.create({
+      name:         name.trim(),
+      email:        email.toLowerCase().trim(),
+      password:     hashed,
+      role:         'student',
+      enrollment:   enrollmentDigits,
+      studentClass: studentClass ? studentClass.trim()             : '',
+      mobile:       mobile       ? mobile.trim()                   : '',
+      isVerified:   true,
+    });
 
-        {valid && (
-          <form onSubmit={submit}>
+    // Increment use count — does NOT mark as used so others can still register
+    await Invite.findByIdAndUpdate(invite._id, { $inc: { usedCount: 1 } });
 
-            <div className="form-group">
-              <label>Full Name *</label>
-              <input type="text" placeholder="Enter your full name"
-                value={form.name}
-                onChange={e => setForm({ ...form, name: e.target.value })}
-                required />
-            </div>
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    res.json({ token, role: user.role, name: user.name, id: user._id });
+  } catch (err) {
+    res.status(500).json({ msg: 'Registration failed: ' + err.message });
+  }
+});
 
-            <div className="form-group">
-              <label>Email Address *</label>
-              <input type="email" placeholder="Enter your email address"
-                value={form.email}
-                onChange={e => setForm({ ...form, email: e.target.value })}
-                required
-                style={{ border: form.email && !isValidEmail(form.email) ? '1px solid #dc2626' : '' }} />
-              {form.email && !isValidEmail(form.email) && (
-                <p style={{ color: '#dc2626', fontSize: 11, margin: '3px 0 0' }}>
-                  ⚠️ Enter a valid, real email address
-                </p>
-              )}
-            </div>
-
-            <div className="form-group">
-              <label>Enrollment Number * (numbers only, max 14)</label>
-              <input type="text" placeholder="e.g. 24012250910002"
-                value={form.enrollment}
-                onChange={e => {
-                  const val = e.target.value.replace(/\D/g, '').slice(0, 14);
-                  setForm({ ...form, enrollment: val });
-                }}
-                maxLength={14}
-                required
-                style={{ border: form.enrollment && !isValidEnrollment(form.enrollment) ? '1px solid #dc2626' : '' }} />
-              {form.enrollment && !isValidEnrollment(form.enrollment) && (
-                <p style={{ color: '#dc2626', fontSize: 11, margin: '3px 0 0' }}>
-                  ⚠️ Numbers only, maximum 14 digits
-                </p>
-              )}
-            </div>
-
-            <div className="form-group">
-              <label>Class *</label>
-              <select
-                value={form.studentClass}
-                onChange={e => setForm({ ...form, studentClass: e.target.value })}
-                required
-                style={{ width: '100%', padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, outline: 'none', boxSizing: 'border-box', background: 'white' }}>
-                <option value="">-- Select Class --</option>
-                {CLASS_OPTIONS.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Mobile Number * (10 digits)</label>
-              <input type="text" placeholder="e.g. 9876543210"
-                value={form.mobile}
-                onChange={e => {
-                  const val = e.target.value.replace(/\D/g, '');
-                  setForm({ ...form, mobile: val });
-                }}
-                maxLength={10}
-                required
-                style={{ border: form.mobile && !isValidMobile(form.mobile) ? '1px solid #dc2626' : '' }} />
-              {form.mobile && !isValidMobile(form.mobile) && (
-                <p style={{ color: '#dc2626', fontSize: 11, margin: '3px 0 0' }}>
-                  ⚠️ Must be 10 digits starting with 6, 7, 8 or 9
-                </p>
-              )}
-            </div>
-
-            <div className="form-group">
-              <label>Password * (min 6 characters)</label>
-              <input type="password" placeholder="Create a strong password"
-                value={form.password}
-                onChange={e => setForm({ ...form, password: e.target.value })}
-                required />
-            </div>
-
-            <div className="form-group">
-              <label>Confirm Password *</label>
-              <input type="password" placeholder="Re-enter your password"
-                value={form.confirmPassword}
-                onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
-                required
-                style={{ border: form.confirmPassword && form.password !== form.confirmPassword ? '1px solid #dc2626' : '' }} />
-              {form.confirmPassword && form.password !== form.confirmPassword && (
-                <p style={{ color: '#dc2626', fontSize: 11, margin: '3px 0 0' }}>
-                  ⚠️ Passwords do not match
-                </p>
-              )}
-            </div>
-
-            <button className="btn btn-primary"
-              style={{ width: '100%', marginTop: 8, padding: 12 }}
-              type="submit">
-              Create My Account
-            </button>
-
-            <p style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: '#888' }}>
-              Already registered?{' '}
-              <a href="/login" style={{ color: '#4f46e5' }}>Login here</a>
-            </p>
-          </form>
-        )}
-      </div>
-    </div>
-  );
-}
+module.exports = router;

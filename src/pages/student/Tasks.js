@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useLocation } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
 import { toast } from 'react-toastify';
@@ -24,17 +23,12 @@ const PHASES = [
 ];
 
 export default function StudentTasks() {
-  const location = useLocation();
   const [tasks, setTasks]               = useState([]);
   const [uploadingId, setUploadingId]   = useState(null);
   const [comment, setComment]           = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [currentTask, setCurrentTask]   = useState(null);
-  const [previewUrl, setPreviewUrl]     = useState(null);
-  const [previewName, setPreviewName]   = useState('');
-  // 'all' | 'pending' | 'completed' — set from Dashboard stat-card clicks via navigation state
-  const [filterStatus, setFilterStatus] = useState('all');
   const token     = localStorage.getItem('token');
   const studentId = localStorage.getItem('id');
   const h = { headers: { Authorization: 'Bearer ' + token } };
@@ -43,18 +37,7 @@ export default function StudentTasks() {
     axios.get(`${API}/api/student/tasks`, h).then(r => setTasks(r.data)).catch(() => {});
   };
 
-  useEffect(() => {
-    load();
-    // Auto-refresh so faculty feedback / status changes show up without a manual refresh
-    const interval = setInterval(load, 8000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Pick up the status filter passed from the Dashboard's stat cards
-  useEffect(() => {
-    const incoming = location.state?.statusFilter;
-    if (incoming) setFilterStatus(incoming); // 'all' | 'pending' | 'completed'
-  }, [location.state]);
+  useEffect(() => { load(); }, []);
 
   const isOverdue = (dueDate) => dueDate && new Date(dueDate) < new Date();
 
@@ -87,9 +70,9 @@ export default function StudentTasks() {
         { headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'multipart/form-data' } }
       );
       if (res.data.isLate) {
-        toast.warning('Uploaded as late submission!');
+        toast.warning('Submitted as late submission!');
       } else {
-        toast.success('Task uploaded successfully!');
+        toast.success('Task submitted successfully!');
       }
       setShowUploadModal(false);
       load();
@@ -104,12 +87,6 @@ export default function StudentTasks() {
     }
   };
 
-  // Opens a preview of the submitted file (in a new tab) before the student decides to download it
-  const openPreview = (rawUrl, name) => {
-    setPreviewUrl(rawUrl);
-    setPreviewName(name);
-  };
-
   const statusColor = {
     pending:       'badge-warning',
     'in-progress': 'badge-info',
@@ -117,18 +94,9 @@ export default function StudentTasks() {
     late:          'badge-danger',
   };
 
-  // Apply status filter before grouping by phase
-  // (pending bucket = anything not yet completed, matching faculty-side logic)
-  const filteredTasks = tasks.filter(t => {
-    if (filterStatus === 'all') return true;
-    if (filterStatus === 'completed') return t.status === 'completed';
-    if (filterStatus === 'pending') return t.status !== 'completed';
-    return true;
-  });
-
   const grouped = {};
   PHASES.forEach(p => { grouped[p.value] = []; });
-  filteredTasks.forEach(t => {
+  tasks.forEach(t => {
     if (t.phase && grouped[t.phase] !== undefined) {
       grouped[t.phase].push(t);
     } else {
@@ -152,32 +120,19 @@ export default function StudentTasks() {
     return null;
   };
 
-  const statusFilterStyle = (s) => ({
-    padding:'6px 14px', borderRadius:8, fontSize:12, border:'1px solid #d1d5db', cursor:'pointer',
-    background: filterStatus === s ? '#16a34a' : 'white',
-    color: filterStatus === s ? 'white' : '#555',
-  });
-
   return (
     <div>
       <Navbar title="Student Portal" />
       <div className="layout">
         <Sidebar links={links} />
         <div className="main-content">
-          <h2 style={{ marginBottom:16 }}>My Tasks</h2>
+          <h2 style={{ marginBottom:20 }}>My Tasks</h2>
 
-          {/* Status filter (Pending / Completed / All) — driven by Dashboard stat-card clicks, also clickable here */}
-          <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:20 }}>
-            <button type="button" onClick={() => setFilterStatus('all')} style={statusFilterStyle('all')}>All Status</button>
-            <button type="button" onClick={() => setFilterStatus('pending')} style={statusFilterStyle('pending')}>⏳ Pending</button>
-            <button type="button" onClick={() => setFilterStatus('completed')} style={statusFilterStyle('completed')}>✅ Completed</button>
-          </div>
-
-          {filteredTasks.length===0 && (
+          {tasks.length===0 && (
             <div className="card" style={{ textAlign:'center', color:'#888', padding:40 }}>
               <div style={{ fontSize:48, marginBottom:12 }}>📋</div>
-              <h3>No Tasks Found</h3>
-              <p>{tasks.length===0 ? 'Your faculty will assign tasks to your group.' : 'Try a different filter above.'}</p>
+              <h3>No Tasks Assigned Yet</h3>
+              <p>Your faculty will assign tasks to your group.</p>
             </div>
           )}
 
@@ -242,30 +197,42 @@ export default function StudentTasks() {
                               {mySubmission.comment&&<p style={{ margin:'4px 0', color:'#555' }}>{mySubmission.comment}</p>}
                               {(() => {
                                 const rawUrl = mySubmission.document || mySubmission.fileUrl || '';
-                                const dlName = 'my_submission_' + rawUrl.split('/').pop();
-                                const dlUrl = `${API}/api/student/download?url=${encodeURIComponent(rawUrl)}&name=${encodeURIComponent(dlName)}`;
+                                const dlUrl = `${API}/api/student/download?url=${encodeURIComponent(rawUrl)}&name=${encodeURIComponent('my_submission_' + rawUrl.split('/').pop())}`;
+                                const isPdf = rawUrl.toLowerCase().includes('.pdf') || rawUrl.toLowerCase().includes('pdf');
                                 return (
-                                  <div style={{ display:'flex', gap:14, marginTop:4 }}>
-                                    <button type="button" onClick={() => openPreview(rawUrl, dlName)} style={{ background:'none', border:'none', color:'#4f46e5', fontSize:12, cursor:'pointer', padding:0, fontWeight:600 }}>
-                                      👁️ Preview
-                                    </button>
-                                    <a href={dlUrl} target="_blank" rel="noreferrer" style={{ color:'#4f46e5', fontSize:12, fontWeight:600 }}>
+                                  <div style={{ display:'flex', gap:8, marginTop:6, flexWrap:'wrap' }}>
+                                    {isPdf && (
+                                      <a href={`https://docs.google.com/viewer?url=${encodeURIComponent(rawUrl)}&embedded=true`}
+                                        target="_blank" rel="noreferrer"
+                                        style={{ display:'inline-flex', alignItems:'center', gap:5,
+                                          background:'#eff6ff', color:'#2563eb', padding:'6px 12px',
+                                          borderRadius:8, fontSize:12, fontWeight:600,
+                                          textDecoration:'none', border:'1px solid #bfdbfe' }}>
+                                        👁️ Preview PDF
+                                      </a>
+                                    )}
+                                    <a href={dlUrl} target="_blank" rel="noreferrer"
+                                      style={{ display:'inline-flex', alignItems:'center', gap:5,
+                                        background:'#f0fdf4', color:'#16a34a', padding:'6px 12px',
+                                        borderRadius:8, fontSize:12, fontWeight:600,
+                                        textDecoration:'none', border:'1px solid #bbf7d0' }}>
                                       📥 Download
                                     </a>
                                   </div>
                                 );
                               })()}
-                            </div>
-                          )}
 
-                          {/* Faculty Feedback / Change Request — shown if faculty has left feedback on this submission */}
-                          {mySubmission?.facultyFeedback && (
-                            <div style={{ background:'#fef9ec', border:'1px solid #fde9c4', borderRadius:8, padding:'10px 14px', marginTop:10, fontSize:13 }}>
-                              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-                                <strong style={{ color:'#92400e' }}>💬 Faculty Feedback</strong>
-                                {mySubmission.feedbackAt && <span style={{ color:'#a16207', fontSize:11 }}>{new Date(mySubmission.feedbackAt).toLocaleDateString()}</span>}
+                            {/* Faculty Feedback */}
+                            {mySubmission.facultyFeedback && (
+                              <div style={{ marginTop:10, background:'#fef9c3', border:'1px solid #fde047', borderRadius:10, padding:'12px 14px' }}>
+                                <p style={{ margin:'0 0 6px', fontSize:12, fontWeight:700, color:'#854d0e' }}>
+                                  📝 FACULTY FEEDBACK {mySubmission.feedbackAt ? `— ${new Date(mySubmission.feedbackAt).toLocaleDateString()}` : ''}
+                                </p>
+                                <p style={{ margin:0, color:'#713f12', fontSize:13, lineHeight:1.7 }}>
+                                  {mySubmission.facultyFeedback}
+                                </p>
                               </div>
-                              <p style={{ margin:0, color:'#444' }}>{mySubmission.facultyFeedback}</p>
+                            )}
                             </div>
                           )}
                         </div>
@@ -304,9 +271,9 @@ export default function StudentTasks() {
             )}
             <form onSubmit={submitUpload}>
               <div className="form-group">
-                <label>Upload Document * (PDF only)</label>
-                <input type="file" accept=".pdf,application/pdf" onChange={e => setSelectedFile(e.target.files[0])} required style={{ width:'100%', padding:'10px 14px', border:'2px dashed #c7d2fe', borderRadius:8, fontSize:14, cursor:'pointer', boxSizing:'border-box' }} />
-                <small style={{ color:'#888', fontSize:12 }}>Only PDF files are accepted</small>
+                <label>Upload Document *</label>
+                <input type="file" accept=".pdf" onChange={e => setSelectedFile(e.target.files[0])} required style={{ width:'100%', padding:'10px 14px', border:'2px dashed #c7d2fe', borderRadius:8, fontSize:14, cursor:'pointer', boxSizing:'border-box' }} />
+                <small style={{ color:'#888', fontSize:12 }}>📄 Only PDF files are accepted</small>
               </div>
               <div className="form-group">
                 <label>Comment (optional)</label>
@@ -315,36 +282,10 @@ export default function StudentTasks() {
               <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:16 }}>
                 <button type="button" className="btn" onClick={() => setShowUploadModal(false)} style={{ background:'#e5e7eb' }}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={uploadingId===currentTask._id}>
-                  {uploadingId===currentTask._id?'Uploading...':'📤 Upload'}
+                  {uploadingId===currentTask._id?'Uploading...':'📤 Upload Task'}
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Preview modal — shows the file in an iframe before the student chooses to download */}
-      {previewUrl && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10000 }}>
-          <div style={{ background:'white', borderRadius:16, padding:20, width:'92%', maxWidth:900, height:'88vh', display:'flex', flexDirection:'column', boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-              <h3 style={{ margin:0, fontSize:16 }}>👁️ Preview — {previewName}</h3>
-              <div style={{ display:'flex', gap:10 }}>
-                <a
-                  href={`${API}/api/student/download?url=${encodeURIComponent(previewUrl)}&name=${encodeURIComponent(previewName)}`}
-                  target="_blank" rel="noreferrer"
-                  className="btn btn-primary" style={{ padding:'6px 14px', fontSize:13 }}
-                >
-                  📥 Download
-                </a>
-                <button type="button" className="btn" onClick={() => setPreviewUrl(null)} style={{ background:'#e5e7eb' }}>Close</button>
-              </div>
-            </div>
-            <iframe
-              src={`${API}/api/student/download?url=${encodeURIComponent(previewUrl)}&name=${encodeURIComponent(previewName)}&inline=1`}
-              title="Submission preview"
-              style={{ flex:1, width:'100%', border:'1px solid #e5e7eb', borderRadius:8 }}
-            />
           </div>
         </div>
       )}

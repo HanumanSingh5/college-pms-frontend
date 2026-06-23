@@ -202,7 +202,7 @@ export default function StudentTasks() {
                                 return (
                                   <div style={{ display:'flex', gap:8, marginTop:6, flexWrap:'wrap' }}>
                                     {isPdf && (
-                                      <a href={`https://docs.google.com/viewer?url=${encodeURIComponent(rawUrl)}&embedded=true`}
+                                      <a href={rawUrl.replace('/raw/upload/', '/image/upload/')}
                                         target="_blank" rel="noreferrer"
                                         style={{ display:'inline-flex', alignItems:'center', gap:5,
                                           background:'#eff6ff', color:'#2563eb', padding:'6px 12px',

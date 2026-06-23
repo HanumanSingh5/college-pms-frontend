@@ -441,7 +441,7 @@ export default function FacultyTasks() {
               </div>
             </div>
             <iframe
-              src={previewUrl}
+              src={`${API}/api/faculty/download?url=${encodeURIComponent(previewUrl)}&name=${encodeURIComponent(previewName)}&inline=1`}
               title="Submission preview"
               style={{ flex:1, width:'100%', border:'1px solid #e5e7eb', borderRadius:8 }}
             />

@@ -207,14 +207,20 @@ export default function StudentTasks() {
                                 );
                               })()}
 
-                            {/* Faculty Feedback */}
-                            {mySubmission.facultyFeedback && (
-                              <div style={{ marginTop:10, background:'#fef9c3', border:'1px solid #fde047', borderRadius:10, padding:'12px 14px' }}>
-                                <p style={{ margin:'0 0 6px', fontSize:12, fontWeight:700, color:'#854d0e' }}>
-                                  📝 FACULTY FEEDBACK {mySubmission.feedbackAt ? `— ${new Date(mySubmission.feedbackAt).toLocaleDateString()}` : ''}
-                                </p>
-                                <p style={{ margin:0, color:'#713f12', fontSize:13, lineHeight:1.7 }}>
-                                  {mySubmission.facultyFeedback}
+                            {/* Faculty Feedback - shows both facultyRemark and facultyFeedback */}
+                            {(mySubmission.facultyRemark || mySubmission.facultyFeedback) && (
+                              <div style={{ marginTop:12, background:'linear-gradient(135deg,#fefce8,#fef9c3)', border:'2px solid #fbbf24', borderRadius:12, padding:'14px 16px' }}>
+                                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
+                                  <span style={{ fontSize:16 }}>💬</span>
+                                  <strong style={{ fontSize:13, color:'#92400e' }}>Faculty Feedback</strong>
+                                  {(mySubmission.remarkAt || mySubmission.feedbackAt) && (
+                                    <span style={{ fontSize:11, color:'#b45309', marginLeft:'auto' }}>
+                                      {new Date(mySubmission.remarkAt || mySubmission.feedbackAt).toLocaleDateString()}
+                                    </span>
+                                  )}
+                                </div>
+                                <p style={{ margin:0, color:'#713f12', fontSize:14, lineHeight:1.8, whiteSpace:'pre-wrap' }}>
+                                  {mySubmission.facultyRemark || mySubmission.facultyFeedback}
                                 </p>
                               </div>
                             )}

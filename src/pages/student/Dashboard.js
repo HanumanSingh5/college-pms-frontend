@@ -26,7 +26,11 @@ export default function StudentDashboard() {
     axios.get(`${process.env.REACT_APP_API_URL}/api/student/profile`, h).then(r => setProfile(r.data));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const interval = setInterval(load, 8000);
+    return () => clearInterval(interval);
+  }, []);
 
   const statusBadge = (status) => {
     if (status === 'finalized') return { bg:'#f0fdf4', color:'#16a34a', text:'✅ Finalized by Faculty' };

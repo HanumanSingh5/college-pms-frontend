@@ -32,6 +32,8 @@ export default function FacultyTasks() {
   const [viewTask, setViewTask]   = useState(null);
   const [previewUrl, setPreviewUrl]   = useState(null);
   const [previewName, setPreviewName] = useState('');
+  const [feedbackDrafts, setFeedbackDrafts] = useState({}); // { studentId: draftText }
+  const [sendingFeedbackFor, setSendingFeedbackFor] = useState(null);
   const [filterPhase, setFilterPhase] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [form, setForm] = useState({ title:'', description:'', phase:'', projectId:'', dueDate:'' });
@@ -115,6 +117,33 @@ export default function FacultyTasks() {
       toast.success(res.data.msg);
       load();
     } catch { toast.error('Failed to update upload status'); }
+  };
+
+  // Faculty sends feedback / change-request text on a specific student's submission
+  const sendFeedback = async (taskId, studentId) => {
+    const text = (feedbackDrafts[studentId] || '').trim();
+    if (!text) return toast.error('Please write a feedback message first');
+    setSendingFeedbackFor(studentId);
+    try {
+      await axios.put(
+        `${API}/api/faculty/task/${taskId}/submission/${studentId}/feedback`,
+        { feedback: text }, h
+      );
+      toast.success('Feedback sent to student!');
+      load();
+      // Keep viewTask in sync with the freshly loaded data once it arrives
+      setTimeout(() => {
+        setViewTask(prev => {
+          if (!prev || prev._id !== taskId) return prev;
+          const updated = tasks.find(t => t._id === taskId);
+          return updated || prev;
+        });
+      }, 300);
+    } catch (err) {
+      toast.error(err.response?.data?.msg || 'Failed to send feedback');
+    } finally {
+      setSendingFeedbackFor(null);
+    }
   };
 
   const statusColor = {
@@ -398,7 +427,7 @@ export default function FacultyTasks() {
                     const rawUrl = sub.document || sub.fileUrl || '';
                     const dlName = (sub.student?.name || 'student').replace(/\s+/g,'_') + '_' + rawUrl.split('/').pop();
                     return (
-                      <div style={{ display:'flex', gap:10 }}>
+                      <div style={{ display:'flex', gap:10, marginBottom:12 }}>
                         <button
                           type="button"
                           onClick={() => { setPreviewUrl(rawUrl); setPreviewName(dlName); }}
@@ -413,6 +442,38 @@ export default function FacultyTasks() {
                           style={{ padding:'6px 14px', fontSize:13 }}>
                           📥 Download
                         </a>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Faculty Feedback / Change Request */}
+                  {(() => {
+                    const studentId = sub.student?._id || sub.student;
+                    return (
+                      <div style={{ background:'#fef9ec', border:'1px solid #fde9c4', borderRadius:8, padding:'12px 14px', marginTop:4 }}>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                          <strong style={{ fontSize:12, color:'#92400e' }}>💬 Faculty Feedback / Change Request</strong>
+                          {sub.feedbackAt && <span style={{ fontSize:11, color:'#a16207' }}>Last updated: {new Date(sub.feedbackAt).toLocaleDateString()}</span>}
+                        </div>
+                        <textarea
+                          rows="2"
+                          placeholder="Write feedback or request changes for this submission..."
+                          value={feedbackDrafts[studentId] !== undefined ? feedbackDrafts[studentId] : (sub.facultyFeedback || '')}
+                          onChange={e => setFeedbackDrafts(prev => ({ ...prev, [studentId]: e.target.value }))}
+                          style={{ width:'100%', padding:'8px 10px', borderRadius:6, border:'1px solid #fde9c4', fontSize:13, resize:'vertical', background:'white' }}
+                        />
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:6 }}>
+                          <span style={{ fontSize:11, color:'#a16207' }}>Student will see this feedback on their Tasks page.</span>
+                          <button
+                            type="button"
+                            className="btn btn-warning"
+                            onClick={() => sendFeedback(viewTask._id, studentId)}
+                            disabled={sendingFeedbackFor === studentId}
+                            style={{ padding:'5px 14px', fontSize:12 }}
+                          >
+                            {sendingFeedbackFor === studentId ? 'Sending...' : '✏️ Update Feedback'}
+                          </button>
+                        </div>
                       </div>
                     );
                   })()}

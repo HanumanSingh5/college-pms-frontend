@@ -49,7 +49,8 @@ export default function StudentTasks() {
     } catch { toast.error('Failed to update status'); }
   };
 
-  const openUpload = (task) => {
+  const openUpload = (task, isReupload = false) => {
+    task._reupload = isReupload;
     setCurrentTask(task);
     setComment('');
     setSelectedFile(null);
@@ -72,7 +73,7 @@ export default function StudentTasks() {
       if (res.data.isLate) {
         toast.warning('Submitted as late submission!');
       } else {
-        toast.success('Task submitted successfully!');
+        toast.success(currentTask._reupload ? 'Task re-uploaded successfully!' : 'Task submitted successfully!');
       }
       setShowUploadModal(false);
       load();
@@ -106,15 +107,22 @@ export default function StudentTasks() {
   });
 
   const canUpload = (task) => {
-    const mySubmission = task.submissions?.find(s => s.student?._id===studentId || s.student===studentId);
-    if (mySubmission) return false;
     if (!task.uploadEnabled) return false;
-    return true;
+    return true; // always allow upload/re-upload if enabled
+  };
+
+  const hasSubmitted = (task) => {
+    return task.submissions?.some(s => s.student?._id===studentId || s.student===studentId);
+  };
+
+  const hasFacultyFeedback = (task) => {
+    const sub = task.submissions?.find(s => s.student?._id===studentId || s.student===studentId);
+    return !!(sub?.facultyFeedback);
   };
 
   const getUploadBlockReason = (task) => {
     const mySubmission = task.submissions?.find(s => s.student?._id===studentId || s.student===studentId);
-    if (mySubmission) return null;
+    if (mySubmission && !mySubmission.facultyFeedback) return null; // submitted, no feedback — block
     if (!task.uploadEnabled && isOverdue(task.dueDate)) return 'blocked';
     if (!task.uploadEnabled) return 'disabled';
     return null;
@@ -198,27 +206,12 @@ export default function StudentTasks() {
                               {(() => {
                                 const rawUrl = mySubmission.document || mySubmission.fileUrl || '';
                                 const dlUrl = `${API}/api/student/download?url=${encodeURIComponent(rawUrl)}&name=${encodeURIComponent('my_submission_' + rawUrl.split('/').pop())}`;
-                                const isPdf = rawUrl.toLowerCase().includes('.pdf') || rawUrl.toLowerCase().includes('pdf');
                                 return (
-                                  <div style={{ display:'flex', gap:8, marginTop:6, flexWrap:'wrap' }}>
-                                    {isPdf && (
-                                      <a href={rawUrl.replace('/raw/upload/', '/image/upload/')}
-                                        target="_blank" rel="noreferrer"
-                                        style={{ display:'inline-flex', alignItems:'center', gap:5,
-                                          background:'#eff6ff', color:'#2563eb', padding:'6px 12px',
-                                          borderRadius:8, fontSize:12, fontWeight:600,
-                                          textDecoration:'none', border:'1px solid #bfdbfe' }}>
-                                        👁️ Preview PDF
-                                      </a>
-                                    )}
-                                    <a href={dlUrl} target="_blank" rel="noreferrer"
-                                      style={{ display:'inline-flex', alignItems:'center', gap:5,
-                                        background:'#f0fdf4', color:'#16a34a', padding:'6px 12px',
-                                        borderRadius:8, fontSize:12, fontWeight:600,
-                                        textDecoration:'none', border:'1px solid #bbf7d0' }}>
-                                      📥 Download
-                                    </a>
-                                  </div>
+                                  <a href={dlUrl}
+                                    target="_blank" rel="noreferrer"
+                                    style={{ color:'#4f46e5', fontSize:12 }}>
+                                    📄 View my submission
+                                  </a>
                                 );
                               })()}
 
@@ -242,7 +235,7 @@ export default function StudentTasks() {
                             <button type="button" className="btn btn-warning" onClick={() => updateStatus(t._id,'in-progress')} style={{ fontSize:12, padding:'6px 12px' }}>▶ Start</button>
                           )}
                           {uploadAllowed&&(
-                            <button type="button" className="btn btn-primary" onClick={() => openUpload(t)} disabled={uploadingId===t._id} style={{ fontSize:12, padding:'6px 12px' }}>📤 Upload</button>
+                            <button type="button" className="btn btn-primary" onClick={() => openUpload(t)} disabled={uploadingId===t._id} style={{ fontSize:12, padding:'6px 12px' }}>📤 Submit</button>
                           )}
                           {!uploadAllowed&&!mySubmission&&blockReason&&(
                             <div style={{ background:'#f3f4f6', border:'1px solid #e5e7eb', borderRadius:8, padding:'8px 12px', fontSize:11, color:'#6b7280', textAlign:'center', maxWidth:100 }}>🔒 Blocked</div>
@@ -262,7 +255,7 @@ export default function StudentTasks() {
       {showUploadModal && currentTask && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
           <div style={{ background:'white', borderRadius:16, padding:32, width:'100%', maxWidth:480, boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
-            <h3 style={{ marginBottom:8 }}>📤 Upload Task</h3>
+            <h3 style={{ marginBottom:8 }}>📤 Submit Task</h3>
             <p style={{ color:'#888', fontSize:13, marginBottom:20 }}>{currentTask.title}</p>
             {isOverdue(currentTask.dueDate)&&(
               <div style={{ background:'#fef3c7', border:'1px solid #fcd34d', borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#92400e' }}>
@@ -272,8 +265,8 @@ export default function StudentTasks() {
             <form onSubmit={submitUpload}>
               <div className="form-group">
                 <label>Upload Document *</label>
-                <input type="file" accept=".pdf" onChange={e => setSelectedFile(e.target.files[0])} required style={{ width:'100%', padding:'10px 14px', border:'2px dashed #c7d2fe', borderRadius:8, fontSize:14, cursor:'pointer', boxSizing:'border-box' }} />
-                <small style={{ color:'#888', fontSize:12 }}>📄 Only PDF files are accepted</small>
+                <input type="file" accept=".pdf,.doc,.docx,.xlsx,.xls,.ppt,.pptx,.zip,.txt" onChange={e => setSelectedFile(e.target.files[0])} required style={{ width:'100%', padding:'10px 14px', border:'2px dashed #c7d2fe', borderRadius:8, fontSize:14, cursor:'pointer', boxSizing:'border-box' }} />
+                <small style={{ color:'#888', fontSize:12 }}>PDF, Word, Excel, PPT, ZIP accepted</small>
               </div>
               <div className="form-group">
                 <label>Comment (optional)</label>
@@ -282,7 +275,7 @@ export default function StudentTasks() {
               <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:16 }}>
                 <button type="button" className="btn" onClick={() => setShowUploadModal(false)} style={{ background:'#e5e7eb' }}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={uploadingId===currentTask._id}>
-                  {uploadingId===currentTask._id?'Uploading...':'📤 Upload Task'}
+                  {uploadingId===currentTask._id?'Uploading...':'📤 Submit Task'}
                 </button>
               </div>
             </form>

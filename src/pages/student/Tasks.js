@@ -234,10 +234,20 @@ export default function StudentTasks() {
                           {t.status==='pending'&&!overdue&&(
                             <button type="button" className="btn btn-warning" onClick={() => updateStatus(t._id,'in-progress')} style={{ fontSize:12, padding:'6px 12px' }}>▶ Start</button>
                           )}
-                          {uploadAllowed&&(
-                            <button type="button" className="btn btn-primary" onClick={() => openUpload(t)} disabled={uploadingId===t._id} style={{ fontSize:12, padding:'6px 12px' }}>📤 Submit</button>
+                          {/* First upload — not yet submitted */}
+                          {!hasSubmitted(t) && uploadAllowed && (
+                            <button type="button" className="btn btn-primary" onClick={() => openUpload(t, false)} disabled={uploadingId===t._id} style={{ fontSize:12, padding:'6px 12px' }}>
+                              {uploadingId===t._id ? 'Uploading...' : '📤 Submit'}
+                            </button>
                           )}
-                          {!uploadAllowed&&!mySubmission&&blockReason&&(
+                          {/* Re-upload — submitted AND faculty gave feedback */}
+                          {hasSubmitted(t) && hasFacultyFeedback(t) && uploadAllowed && (
+                            <button type="button" onClick={() => openUpload(t, true)} disabled={uploadingId===t._id}
+                              style={{ fontSize:12, padding:'6px 12px', background:'linear-gradient(135deg,#f59e0b,#d97706)', color:'white', border:'none', borderRadius:8, cursor:'pointer', fontWeight:600 }}>
+                              {uploadingId===t._id ? 'Uploading...' : '🔄 Re-upload'}
+                            </button>
+                          )}
+                          {!hasSubmitted(t) && !uploadAllowed && blockReason && (
                             <div style={{ background:'#f3f4f6', border:'1px solid #e5e7eb', borderRadius:8, padding:'8px 12px', fontSize:11, color:'#6b7280', textAlign:'center', maxWidth:100 }}>🔒 Blocked</div>
                           )}
                         </div>

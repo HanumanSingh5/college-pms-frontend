@@ -25,8 +25,6 @@ export default function FacultyTasks() {
   const [lateTasks,  setLateTasks]  = useState([]);
   const [projects,   setProjects]   = useState([]);
   const [tab,        setTab]        = useState('all');
-  // Which project's tasks/phases are currently open. null = show the project list.
-  const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [filterPhase, setFilterPhase] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showModal,  setShowModal]  = useState(false);
@@ -130,8 +128,6 @@ export default function FacultyTasks() {
   let filtered = tasks;
   if (filterPhase  !== 'all') filtered = filtered.filter(t => t.phase === filterPhase);
   if (filterStatus !== 'all') filtered = filtered.filter(t => t.status === filterStatus);
-  // Once a project is opened, only show tasks belonging to it
-  if (selectedProjectId) filtered = filtered.filter(t => (t.project?._id || 'unknown') === selectedProjectId);
 
   const grouped = {};
   filtered.forEach(t => {
@@ -139,15 +135,6 @@ export default function FacultyTasks() {
     if (!grouped[key]) grouped[key] = { project:t.project, tasks:[] };
     grouped[key].tasks.push(t);
   });
-
-  // Task counts per project, used on the project-list cards (independent of current filters)
-  const taskCountByProject = {};
-  tasks.forEach(t => {
-    const key = t.project?._id || 'unknown';
-    taskCountByProject[key] = (taskCountByProject[key] || 0) + 1;
-  });
-
-  const selectedProject = projects.find(p => p._id === selectedProjectId);
 
   const statusConfig = {
     'pending':     { bg:'#fef3c7', color:'#92400e', label:'Pending' },
@@ -200,23 +187,8 @@ export default function FacultyTasks() {
       <main style={{ marginLeft:240, flex:1, padding:'36px 40px' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:28 }}>
           <div>
-            {selectedProjectId ? (
-              <>
-                <button type="button" onClick={() => setSelectedProjectId(null)}
-                  style={{ background:'none', border:'none', color:'#6366f1', fontWeight:700, fontSize:13, cursor:'pointer', padding:0, marginBottom:8, display:'flex', alignItems:'center', gap:6 }}>
-                  ← Back to Projects
-                </button>
-                <h1 style={{ margin:0, fontSize:24, fontWeight:800, color:'#1e1b4b' }}>{selectedProject?.title || 'Project'}</h1>
-                <p style={{ margin:'4px 0 0', color:'#94a3b8', fontSize:14 }}>
-                  Group {selectedProject?.groupNo || '-'} · {taskCountByProject[selectedProjectId] || 0} task{(taskCountByProject[selectedProjectId]||0)!==1?'s':''}
-                </p>
-              </>
-            ) : (
-              <>
-                <h1 style={{ margin:0, fontSize:24, fontWeight:800, color:'#1e1b4b' }}>Student Projects</h1>
-                <p style={{ margin:'4px 0 0', color:'#94a3b8', fontSize:14 }}>{projects.length} project{projects.length!==1?'s':''} assigned to you — click one to manage its tasks</p>
-              </>
-            )}
+            <h1 style={{ margin:0, fontSize:24, fontWeight:800, color:'#1e1b4b' }}>Manage Tasks</h1>
+            <p style={{ margin:'4px 0 0', color:'#94a3b8', fontSize:14 }}>{tasks.length} total task{tasks.length!==1?'s':''} assigned</p>
           </div>
           <button type="button" onClick={() => setShowModal(true)}
             style={{ padding:'12px 24px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'white', border:'none', borderRadius:12, cursor:'pointer', fontWeight:700, fontSize:14, boxShadow:'0 4px 14px rgba(99,102,241,0.35)' }}>
@@ -237,50 +209,7 @@ export default function FacultyTasks() {
           ))}
         </div>
 
-        {tab === 'all' && !selectedProjectId && (
-          /* ── PROJECT LIST VIEW ── */
-          <div>
-            {projects.length === 0 ? (
-              <div style={{ background:'white', borderRadius:16, padding:60, textAlign:'center', boxShadow:'0 1px 4px rgba(0,0,0,0.06)' }}>
-                <div style={{ fontSize:64, marginBottom:16 }}>📭</div>
-                <h3 style={{ color:'#1e1b4b', margin:'0 0 8px' }}>No Projects Assigned Yet</h3>
-                <p style={{ color:'#94a3b8', margin:0 }}>Projects will appear here once assigned to you.</p>
-              </div>
-            ) : (
-              <div style={{ display:'grid', gap:14 }}>
-                {projects.map(p => (
-                  <div key={p._id} onClick={() => setSelectedProjectId(p._id)} role="button" tabIndex={0}
-                    style={{ background:'white', borderRadius:14, padding:'20px 24px', boxShadow:'0 1px 4px rgba(0,0,0,0.06)', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', transition:'0.15s', borderLeft:'4px solid #6366f1' }}>
-                    <div>
-                      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6, flexWrap:'wrap' }}>
-                        <h3 style={{ margin:0, color:'#1e1b4b', fontSize:16 }}>{p.title || 'Untitled Project'}</h3>
-                        <span style={{ background:'#6366f1', color:'white', padding:'3px 12px', borderRadius:20, fontSize:12, fontWeight:700 }}>{p.groupNo || '-'}</span>
-                        <span style={{
-                          background: p.definitionStatus==='finalized' ? '#d1fae5' : p.definitionStatus==='submitted' ? '#dbeafe' : '#fef3c7',
-                          color:      p.definitionStatus==='finalized' ? '#065f46' : p.definitionStatus==='submitted' ? '#1e40af' : '#92400e',
-                          padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:700
-                        }}>
-                          {p.definitionStatus==='finalized' ? '✅ Finalized' : p.definitionStatus==='submitted' ? '📤 Submitted' : '⏳ Pending'}
-                        </span>
-                      </div>
-                      <p style={{ margin:0, color:'#64748b', fontSize:13 }}>
-                        👥 {p.students?.map(s=>s.name).join(', ') || 'No students'}
-                      </p>
-                    </div>
-                    <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-                      <span style={{ color:'#94a3b8', fontSize:13, fontWeight:600 }}>
-                        {taskCountByProject[p._id] || 0} task{(taskCountByProject[p._id]||0)!==1?'s':''}
-                      </span>
-                      <span style={{ fontSize:20, color:'#cbd5e1' }}>→</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {tab === 'all' && selectedProjectId && (
+        {tab === 'all' && (
           <>
             {/* Filters */}
             <div style={{ display:'flex', gap:16, marginBottom:20, flexWrap:'wrap' }}>
@@ -309,7 +238,7 @@ export default function FacultyTasks() {
             {Object.keys(grouped).length === 0 && (
               <div style={{ background:'white', borderRadius:16, padding:60, textAlign:'center', boxShadow:'0 1px 4px rgba(0,0,0,0.06)' }}>
                 <div style={{ fontSize:64, marginBottom:16 }}>📋</div>
-                <h3 style={{ color:'#1e1b4b', margin:'0 0 8px' }}>No Tasks Yet for This Project</h3>
+                <h3 style={{ color:'#1e1b4b', margin:'0 0 8px' }}>No Tasks Yet</h3>
                 <p style={{ color:'#94a3b8', margin:'0 0 20px' }}>Click "+ Assign New Task" to get started.</p>
                 <button type="button" onClick={() => setShowModal(true)}
                   style={{ padding:'12px 24px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'white', border:'none', borderRadius:12, cursor:'pointer', fontWeight:700, fontSize:14 }}>
@@ -571,33 +500,16 @@ export default function FacultyTasks() {
                     </div>
                   )}
 
-                  {/* Preview + Download */}
+                  {/* Download */}
                   {(sub.document || sub.fileUrl) && (() => {
                     const rawUrl = sub.document || sub.fileUrl || '';
                     const dlName = (sub.student?.name||'student').replace(/\s+/g,'_') + '_' + rawUrl.split('/').pop();
-                    const isPdf = rawUrl.toLowerCase().includes('.pdf') || rawUrl.toLowerCase().includes('pdf');
-                    const previewUrl = rawUrl.replace('/raw/upload/', '/image/upload/');
                     return (
-                      <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:16 }}>
-                        {isPdf && (
-                          <a href={previewUrl}
-                            target="_blank" rel="noreferrer"
-                            style={{ display:'inline-flex', alignItems:'center', gap:6,
-                              padding:'8px 16px', background:'#eff6ff', color:'#2563eb',
-                              borderRadius:8, fontSize:13, fontWeight:600,
-                              textDecoration:'none', border:'1px solid #bfdbfe' }}>
-                            👁️ Preview PDF
-                          </a>
-                        )}
-                        <a href={`${API}/api/faculty/download?url=${encodeURIComponent(rawUrl)}&name=${encodeURIComponent(dlName)}`}
-                          target="_blank" rel="noreferrer"
-                          style={{ display:'inline-flex', alignItems:'center', gap:6,
-                            padding:'8px 16px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                            color:'white', borderRadius:8, fontSize:13, fontWeight:600,
-                            textDecoration:'none' }}>
-                          📥 Download
-                        </a>
-                      </div>
+                      <a href={`${API}/api/faculty/download?url=${encodeURIComponent(rawUrl)}&name=${encodeURIComponent(dlName)}`}
+                        target="_blank" rel="noreferrer"
+                        style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'8px 16px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'white', borderRadius:8, fontSize:13, fontWeight:600, textDecoration:'none', marginBottom:16 }}>
+                        📥 Download Submission
+                      </a>
                     );
                   })()}
 

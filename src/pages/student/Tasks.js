@@ -37,7 +37,12 @@ export default function StudentTasks() {
     axios.get(`${API}/api/student/tasks`, h).then(r => setTasks(r.data)).catch(() => {});
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // Auto-refresh so faculty feedback / status changes show up without a manual refresh
+    const interval = setInterval(load, 8000);
+    return () => clearInterval(interval);
+  }, []);
 
   const isOverdue = (dueDate) => dueDate && new Date(dueDate) < new Date();
 
@@ -106,6 +111,17 @@ export default function StudentTasks() {
     }
   });
 
+  // Faculty can leave feedback via two different fields depending on which action they used:
+  // - facultyRemark / remarkAt   (the "Faculty Feedback / Change Request" box, /remark/ route)
+  // - facultyFeedback / feedbackAt (the separate /submission/:studentId/feedback route)
+  // Show whichever is present so feedback is never silently missed.
+  const getFeedback = (sub) => {
+    if (!sub) return null;
+    if (sub.facultyRemark)   return { text: sub.facultyRemark,   at: sub.remarkAt };
+    if (sub.facultyFeedback) return { text: sub.facultyFeedback, at: sub.feedbackAt };
+    return null;
+  };
+
   const canUpload = (task) => {
     if (!task.uploadEnabled) return false;
     return true; // always allow upload/re-upload if enabled
@@ -117,12 +133,12 @@ export default function StudentTasks() {
 
   const hasFacultyFeedback = (task) => {
     const sub = task.submissions?.find(s => s.student?._id===studentId || s.student===studentId);
-    return !!(sub?.facultyFeedback);
+    return !!getFeedback(sub);
   };
 
   const getUploadBlockReason = (task) => {
     const mySubmission = task.submissions?.find(s => s.student?._id===studentId || s.student===studentId);
-    if (mySubmission && !mySubmission.facultyFeedback) return null; // submitted, no feedback — block
+    if (mySubmission && !getFeedback(mySubmission)) return null; // submitted, no feedback — block
     if (!task.uploadEnabled && isOverdue(task.dueDate)) return 'blocked';
     if (!task.uploadEnabled) return 'disabled';
     return null;
@@ -156,6 +172,7 @@ export default function StudentTasks() {
 
                 {phaseTasks.map(t => {
                   const mySubmission = t.submissions?.find(s => s.student?._id===studentId || s.student===studentId);
+                  const feedback     = getFeedback(mySubmission);
                   const overdue      = isOverdue(t.dueDate);
                   const blockReason  = getUploadBlockReason(t);
                   const uploadAllowed = canUpload(t);
@@ -215,14 +232,14 @@ export default function StudentTasks() {
                                 );
                               })()}
 
-                            {/* Faculty Feedback */}
-                            {mySubmission.facultyFeedback && (
+                            {/* Faculty Feedback — shown whether faculty used the remark box or the feedback route */}
+                            {feedback && (
                               <div style={{ marginTop:10, background:'#fef9c3', border:'1px solid #fde047', borderRadius:10, padding:'12px 14px' }}>
                                 <p style={{ margin:'0 0 6px', fontSize:12, fontWeight:700, color:'#854d0e' }}>
-                                  📝 FACULTY FEEDBACK {mySubmission.feedbackAt ? `— ${new Date(mySubmission.feedbackAt).toLocaleDateString()}` : ''}
+                                  📝 FACULTY FEEDBACK {feedback.at ? `— ${new Date(feedback.at).toLocaleDateString()}` : ''}
                                 </p>
                                 <p style={{ margin:0, color:'#713f12', fontSize:13, lineHeight:1.7 }}>
-                                  {mySubmission.facultyFeedback}
+                                  {feedback.text}
                                 </p>
                               </div>
                             )}
@@ -265,7 +282,7 @@ export default function StudentTasks() {
       {showUploadModal && currentTask && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
           <div style={{ background:'white', borderRadius:16, padding:32, width:'100%', maxWidth:480, boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
-            <h3 style={{ marginBottom:8 }}>📤 Submit Task</h3>
+            <h3 style={{ marginBottom:8 }}>📤 {currentTask._reupload ? 'Re-upload Task' : 'Submit Task'}</h3>
             <p style={{ color:'#888', fontSize:13, marginBottom:20 }}>{currentTask.title}</p>
             {isOverdue(currentTask.dueDate)&&(
               <div style={{ background:'#fef3c7', border:'1px solid #fcd34d', borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#92400e' }}>
@@ -274,9 +291,9 @@ export default function StudentTasks() {
             )}
             <form onSubmit={submitUpload}>
               <div className="form-group">
-                <label>Upload Document *</label>
-                <input type="file" accept=".pdf,.doc,.docx,.xlsx,.xls,.ppt,.pptx,.zip,.txt" onChange={e => setSelectedFile(e.target.files[0])} required style={{ width:'100%', padding:'10px 14px', border:'2px dashed #c7d2fe', borderRadius:8, fontSize:14, cursor:'pointer', boxSizing:'border-box' }} />
-                <small style={{ color:'#888', fontSize:12 }}>PDF, Word, Excel, PPT, ZIP accepted</small>
+                <label>Upload Document * (PDF only)</label>
+                <input type="file" accept=".pdf,application/pdf" onChange={e => setSelectedFile(e.target.files[0])} required style={{ width:'100%', padding:'10px 14px', border:'2px dashed #c7d2fe', borderRadius:8, fontSize:14, cursor:'pointer', boxSizing:'border-box' }} />
+                <small style={{ color:'#888', fontSize:12 }}>Only PDF files are accepted</small>
               </div>
               <div className="form-group">
                 <label>Comment (optional)</label>
@@ -285,7 +302,7 @@ export default function StudentTasks() {
               <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:16 }}>
                 <button type="button" className="btn" onClick={() => setShowUploadModal(false)} style={{ background:'#e5e7eb' }}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={uploadingId===currentTask._id}>
-                  {uploadingId===currentTask._id?'Uploading...':'📤 Submit Task'}
+                  {uploadingId===currentTask._id ? 'Uploading...' : (currentTask._reupload ? '🔄 Re-upload' : '📤 Upload')}
                 </button>
               </div>
             </form>

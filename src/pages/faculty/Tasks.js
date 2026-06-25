@@ -502,14 +502,22 @@ export default function FacultyTasks() {
 
                   {/* Download */}
                   {(sub.document || sub.fileUrl) && (() => {
-                    const rawUrl = sub.document || sub.fileUrl || '';
+                    const rawUrl = (sub.document || sub.fileUrl || '').replace('/image/upload/', '/raw/upload/');
                     const dlName = (sub.student?.name||'student').replace(/\s+/g,'_') + '_' + rawUrl.split('/').pop();
+                    // Preview URL — direct Cloudinary raw URL opens in browser
+                    const previewUrl = rawUrl;
                     return (
-                      <a href={`${API}/api/faculty/download?url=${encodeURIComponent(rawUrl)}&name=${encodeURIComponent(dlName)}`}
-                        target="_blank" rel="noreferrer"
-                        style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'8px 16px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'white', borderRadius:8, fontSize:13, fontWeight:600, textDecoration:'none', marginBottom:16 }}>
-                        📥 Download Submission
-                      </a>
+                      <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap' }}>
+                        <a href={previewUrl} target="_blank" rel="noreferrer"
+                          style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'8px 16px', background:'#eff6ff', color:'#1d4ed8', border:'1px solid #bfdbfe', borderRadius:8, fontSize:13, fontWeight:600, textDecoration:'none' }}>
+                          👁️ Preview PDF
+                        </a>
+                        <a href={`${API}/api/faculty/download?url=${encodeURIComponent(rawUrl)}&name=${encodeURIComponent(dlName)}`}
+                          target="_blank" rel="noreferrer"
+                          style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'8px 16px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'white', borderRadius:8, fontSize:13, fontWeight:600, textDecoration:'none' }}>
+                          📥 Download Submission
+                        </a>
+                      </div>
                     );
                   })()}
 

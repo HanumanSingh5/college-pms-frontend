@@ -54,6 +54,16 @@ export default function AdminProjects() {
   const token = localStorage.getItem('token');
   const h = { headers: { Authorization: 'Bearer ' + token } };
 
+  const recategorize = async () => {
+    try {
+      const res = await axios.post(`${API}/api/admin/recategorize-projects`, {}, h);
+      toast.success(res.data.msg);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.msg || 'Failed to re-categorize');
+    }
+  };
+
   const load = () => {
     axios.get(`${API}/api/admin/projects`,  h).then(r => setProjects(r.data)).catch(()=>{});
     axios.get(`${API}/api/admin/faculties`, h).then(r => setFaculties(r.data)).catch(()=>{});

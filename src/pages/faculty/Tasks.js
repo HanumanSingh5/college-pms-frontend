@@ -505,11 +505,12 @@ export default function FacultyTasks() {
                   {(sub.document || sub.fileUrl) && (() => {
                     const rawUrl = (sub.document || sub.fileUrl || '').replace('/image/upload/', '/raw/upload/');
                     const dlName = (sub.student?.name||'student').replace(/\s+/g,'_') + '_' + rawUrl.split('/').pop();
-                    const previewUrl = `${API}/api/faculty/download?url=${encodeURIComponent(rawUrl)}&name=${encodeURIComponent(dlName)}&preview=1`;
                     const downloadUrl = `${API}/api/faculty/download?url=${encodeURIComponent(rawUrl)}&name=${encodeURIComponent(dlName)}`;
+                    // Use Google Docs Viewer to render the PDF inline (works cross-origin)
+                    const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(rawUrl)}&embedded=true`;
                     return (
                       <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap' }}>
-                        <button type="button" onClick={() => setPdfPreview(previewUrl)}
+                        <button type="button" onClick={() => setPdfPreview(googleViewerUrl)}
                           style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'8px 16px', background:'#eff6ff', color:'#1d4ed8', border:'1px solid #bfdbfe', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
                           👁️ Preview PDF
                         </button>
@@ -571,11 +572,16 @@ export default function FacultyTasks() {
                 ✕ Close
               </button>
             </div>
-            <iframe
-              src={pdfPreview}
-              title="PDF Preview"
-              style={{ flex:1, border:'none', width:'100%' }}
-            />
+            <div style={{ flex:1, position:'relative' }}>
+              <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', color:'#888', fontSize:14, zIndex:0 }}>
+                ⏳ Loading preview...
+              </div>
+              <iframe
+                src={pdfPreview}
+                title="PDF Preview"
+                style={{ position:'relative', zIndex:1, width:'100%', height:'100%', border:'none' }}
+              />
+            </div>
           </div>
         </div>
       )}

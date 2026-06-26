@@ -150,7 +150,7 @@ export default function FacultyDashboard() {
 
           {/* Pill tabs */}
           <div style={{ display:'flex', gap:8, marginBottom:20, flexWrap:'wrap' }}>
-            <button style={pillTab('projects')}    onClick={() => setTab('projects')}    type="button">📁 My Projects</button>
+            <button style={pillTab('projects')}    onClick={() => setTab('projects')}    type="button">📁 Students Project</button>
             <button style={pillTab('students')}    onClick={() => setTab('students')}    type="button">👥 Student Details</button>
             <button style={{ ...pillTab('definitions'), display:'inline-flex', alignItems:'center', gap:6 }} onClick={() => setTab('definitions')} type="button">
               📝 Definitions

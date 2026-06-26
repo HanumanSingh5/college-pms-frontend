@@ -34,6 +34,7 @@ export default function FacultyTasks() {
   const [sendingFeedback, setSendingFeedback] = useState({});
   const [remarks,    setRemarks]    = useState({});  // { submissionIndex: text }
   const [savingRemark, setSavingRemark] = useState(null);
+  const [pdfPreview, setPdfPreview] = useState(null); // URL to preview in modal
   const [form,       setForm]       = useState({ title:'', description:'', phase:'', projectId:'', dueDate:'' });
   const [editForm,   setEditForm]   = useState({ title:'', description:'', dueDate:'', status:'' });
 
@@ -508,10 +509,10 @@ export default function FacultyTasks() {
                     const downloadUrl = `${API}/api/faculty/download?url=${encodeURIComponent(rawUrl)}&name=${encodeURIComponent(dlName)}`;
                     return (
                       <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap' }}>
-                        <a href={previewUrl} target="_blank" rel="noreferrer"
-                          style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'8px 16px', background:'#eff6ff', color:'#1d4ed8', border:'1px solid #bfdbfe', borderRadius:8, fontSize:13, fontWeight:600, textDecoration:'none' }}>
+                        <button type="button" onClick={() => setPdfPreview(previewUrl)}
+                          style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'8px 16px', background:'#eff6ff', color:'#1d4ed8', border:'1px solid #bfdbfe', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
                           👁️ Preview PDF
-                        </a>
+                        </button>
                         <a href={downloadUrl} target="_blank" rel="noreferrer"
                           style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'8px 16px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'white', borderRadius:8, fontSize:13, fontWeight:600, textDecoration:'none' }}>
                           📥 Download Submission
@@ -556,6 +557,25 @@ export default function FacultyTasks() {
                 </div>
               ))
             )}
+          </div>
+        </div>
+      )}
+      {/* PDF Preview Modal */}
+      {pdfPreview && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div style={{ background:'white', borderRadius:12, width:'90vw', height:'90vh', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 20px', borderBottom:'1px solid #e7ebee' }}>
+              <strong style={{ fontSize:15 }}>📄 PDF Preview</strong>
+              <button type="button" onClick={() => setPdfPreview(null)}
+                style={{ background:'#f1f5f9', border:'none', borderRadius:8, padding:'6px 14px', cursor:'pointer', fontWeight:600, fontSize:13 }}>
+                ✕ Close
+              </button>
+            </div>
+            <iframe
+              src={pdfPreview}
+              title="PDF Preview"
+              style={{ flex:1, border:'none', width:'100%' }}
+            />
           </div>
         </div>
       )}

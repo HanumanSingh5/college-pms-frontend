@@ -55,7 +55,20 @@ export default function FacultyDashboard() {
             params: { projectId: selectedAttendanceProject, date: attendanceDate }
           });
           const draft = {};
-          (res.data.project?.students || []).forEach((student) => {
+          const projectStudents = res.data.project?.students || [];
+          // include team members if present — flatten the group members
+          const allStudents = [];
+          projectStudents.forEach((s) => {
+            allStudents.push(s);
+            if (Array.isArray(s.teamMembers) && s.teamMembers.length > 0) {
+              s.teamMembers.forEach((tm, idx) => {
+                // ensure team member has an _id fallback (use enrollment or generated key)
+                const id = tm._id || tm.enrollment || `${res.data.project._id}-tm-${idx}`;
+                allStudents.push({ ...tm, _id: id });
+              });
+            }
+          });
+          allStudents.forEach((student) => {
             // Default to empty (not marked) instead of automatically selecting 'absent'
             draft[student._id] = res.data.attendance?.[student._id] || '';
           });
@@ -344,7 +357,20 @@ export default function FacultyDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(projects.find((p) => p._id === selectedAttendanceProject)?.students || []).map((student) => (
+                        {(() => {
+                          const proj = projects.find((p) => p._id === selectedAttendanceProject) || {};
+                          const students = proj.students || [];
+                          const all = [];
+                          students.forEach((s) => {
+                            all.push(s);
+                            if (Array.isArray(s.teamMembers) && s.teamMembers.length > 0) {
+                              s.teamMembers.forEach((tm, idx) => {
+                                const id = tm._id || tm.enrollment || `${proj._id}-tm-${idx}`;
+                                all.push({ ...tm, _id: id });
+                              });
+                            }
+                          });
+                          return all.map((student) => (
                           <tr key={student._id}>
                             <td style={{ padding:'10px 12px' }}>{student.name}</td>
                             <td style={{ padding:'10px 12px' }}>{student.enrollment || '-'}</td>
@@ -362,7 +388,8 @@ export default function FacultyDashboard() {
                               </select>
                             </td>
                           </tr>
-                        ))}
+                          ));
+                        })()}
                       </tbody>
                     </table>
                   </div>

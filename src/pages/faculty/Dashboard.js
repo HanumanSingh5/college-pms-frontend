@@ -50,14 +50,17 @@ export default function FacultyDashboard() {
     if (tab === 'attendance' && selectedAttendanceProject) {
       const loadAttendance = async () => {
         try {
-          const res = await axios.get(`${API}/api/faculty/attendance/${selectedAttendanceProject}?date=${attendanceDate}`, h);
+          const res = await axios.get(`${API}/api/faculty/attendance`, {
+            ...h,
+            params: { projectId: selectedAttendanceProject, date: attendanceDate }
+          });
           const draft = {};
           (res.data.project?.students || []).forEach((student) => {
             draft[student._id] = res.data.attendance?.[student._id] || 'absent';
           });
           setAttendanceDrafts(prev => ({ ...prev, [selectedAttendanceProject]: draft }));
         } catch (err) {
-          console.log('Attendance load error', err.message);
+          console.error('Attendance load error', err.response?.data || err.message);
         }
       };
       loadAttendance();
@@ -122,11 +125,14 @@ export default function FacultyDashboard() {
   };
 
   const saveAttendance = async () => {
-    if (!selectedAttendanceProject) return;
+    if (!selectedAttendanceProject) {
+      toast.error('Please select a project group first');
+      return;
+    }
     setSavingAttendance(true);
     try {
       const entries = Object.entries(attendanceDrafts[selectedAttendanceProject] || {}).map(([studentId, status]) => ({ studentId, status }));
-      await axios.put(`${API}/api/faculty/attendance/${selectedAttendanceProject}`, { date: attendanceDate, entries }, h);
+      await axios.put(`${API}/api/faculty/attendance`, { projectId: selectedAttendanceProject, date: attendanceDate, entries }, h);
       toast.success('Attendance saved');
     } catch (err) {
       const message = err.response?.data?.msg || err.message || 'Could not save attendance';

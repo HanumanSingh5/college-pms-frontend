@@ -15,6 +15,7 @@ export default function StudentDashboard() {
   const [stats, setStats]     = useState({});
   const [project, setProject] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [attendance, setAttendance] = useState([]);
   const token = localStorage.getItem('token');
   const h = { headers: { Authorization: `Bearer ${token}` } };
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ export default function StudentDashboard() {
     axios.get(`${process.env.REACT_APP_API_URL}/api/student/stats`,   h).then(r => setStats(r.data));
     axios.get(`${process.env.REACT_APP_API_URL}/api/student/project`, h).then(r => setProject(r.data));
     axios.get(`${process.env.REACT_APP_API_URL}/api/student/profile`, h).then(r => setProfile(r.data));
+    axios.get(`${process.env.REACT_APP_API_URL}/api/student/attendance`, h).then(r => setAttendance(r.data.attendance || []));
   };
 
   useEffect(() => {
@@ -234,6 +236,35 @@ export default function StudentDashboard() {
               <p>The administrator will assign you to a project group.</p>
             </div>
           )}
+
+          <div className="card" style={{ marginTop:16 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+              <h3 style={{ margin:0 }}>Attendance</h3>
+              <span style={{ background:'#f3f4f6', color:'#374151', padding:'4px 10px', borderRadius:20, fontSize:12 }}>View only</span>
+            </div>
+            {attendance.length === 0 ? (
+              <p style={{ margin:0, color:'#6b7280' }}>No attendance records yet.</p>
+            ) : (
+              <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                <thead>
+                  <tr style={{ background:'#f9fafb' }}>
+                    <th style={{ textAlign:'left', padding:'10px 12px' }}>Date</th>
+                    <th style={{ textAlign:'left', padding:'10px 12px' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {attendance.map((item, index) => (
+                    <tr key={index}>
+                      <td style={{ padding:'10px 12px' }}>{item.date}</td>
+                      <td style={{ padding:'10px 12px' }}>
+                        <span style={{ textTransform:'capitalize', fontWeight:600 }}>{item.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
 
         </div>
       </div>

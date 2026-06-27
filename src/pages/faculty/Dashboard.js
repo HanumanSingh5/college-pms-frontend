@@ -20,6 +20,10 @@ export default function FacultyDashboard() {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [editedDef, setEditedDef]     = useState('');
   const [finalizing, setFinalizing]   = useState(false);
+  const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().slice(0, 10));
+  const [selectedAttendanceProject, setSelectedAttendanceProject] = useState('');
+  const [attendanceDrafts, setAttendanceDrafts] = useState({});
+  const [savingAttendance, setSavingAttendance] = useState(false);
   const token = localStorage.getItem('token');
   const name  = localStorage.getItem('name') || 'Faculty';
   const h = { headers: { Authorization: 'Bearer ' + token } };
@@ -35,6 +39,30 @@ export default function FacultyDashboard() {
     const interval = setInterval(load, 8000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (tab === 'attendance' && projects.length > 0 && !selectedAttendanceProject) {
+      setSelectedAttendanceProject(projects[0]._id);
+    }
+  }, [tab, projects, selectedAttendanceProject]);
+
+  useEffect(() => {
+    if (tab === 'attendance' && selectedAttendanceProject) {
+      const loadAttendance = async () => {
+        try {
+          const res = await axios.get(`${API}/api/faculty/attendance/${selectedAttendanceProject}?date=${attendanceDate}`, h);
+          const draft = {};
+          (res.data.project?.students || []).forEach((student) => {
+            draft[student._id] = res.data.attendance?.[student._id] || 'absent';
+          });
+          setAttendanceDrafts(prev => ({ ...prev, [selectedAttendanceProject]: draft }));
+        } catch (err) {
+          console.log('Attendance load error', err.message);
+        }
+      };
+      loadAttendance();
+    }
+  }, [tab, selectedAttendanceProject, attendanceDate, h]);
 
   const openSelectModal = (project) => {
     setSelectModal(project);
@@ -82,6 +110,30 @@ export default function FacultyDashboard() {
 
   const goToProjects = () => setTab('projects');
   const goToTasks = (status) => navigate('/faculty/tasks', { state: { statusFilter: status } });
+
+  const updateAttendanceStatus = (studentId, status) => {
+    setAttendanceDrafts(prev => ({
+      ...prev,
+      [selectedAttendanceProject]: {
+        ...(prev[selectedAttendanceProject] || {}),
+        [studentId]: status,
+      },
+    }));
+  };
+
+  const saveAttendance = async () => {
+    if (!selectedAttendanceProject) return;
+    setSavingAttendance(true);
+    try {
+      const entries = Object.entries(attendanceDrafts[selectedAttendanceProject] || {}).map(([studentId, status]) => ({ studentId, status }));
+      await axios.put(`${API}/api/faculty/attendance/${selectedAttendanceProject}`, { date: attendanceDate, entries }, h);
+      toast.success('Attendance saved');
+    } catch (err) {
+      toast.error(err.response?.data?.msg || 'Could not save attendance');
+    } finally {
+      setSavingAttendance(false);
+    }
+  };
 
   const statCards = [
     { icon: '📁', value: stats.projects || 0, label: 'Assigned Projects', onClick: goToProjects, accent: '#0e9f8e' },
@@ -150,8 +202,9 @@ export default function FacultyDashboard() {
 
           {/* Pill tabs */}
           <div style={{ display:'flex', gap:8, marginBottom:20, flexWrap:'wrap' }}>
-            <button style={pillTab('projects')}    onClick={() => setTab('projects')}    type="button">📁 Students Project</button>
+            <button style={pillTab('projects')}    onClick={() => setTab('projects')}    type="button">📁 My Projects</button>
             <button style={pillTab('students')}    onClick={() => setTab('students')}    type="button">👥 Student Details</button>
+            <button style={pillTab('attendance')}  onClick={() => setTab('attendance')}  type="button">🗓️ Attendance</button>
             <button style={{ ...pillTab('definitions'), display:'inline-flex', alignItems:'center', gap:6 }} onClick={() => setTab('definitions')} type="button">
               📝 Definitions
               {projects.filter(p=>p.definitions?.length>0&&p.definitionStatus!=='finalized').length>0&&(
@@ -183,12 +236,6 @@ export default function FacultyDashboard() {
                       <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                         {p.students?.map(s => <span key={s._id} style={{ background:'#f0fbf9', padding:'3px 10px', borderRadius:6, fontSize:12 }}>{s.name} ({s.enrollment||'-'})</span>)}
                       </div>
-                      {p.finalDefinition&&(
-                        <div style={{ background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:8, padding:'10px 14px', marginTop:12 }}>
-                          <strong style={{ fontSize:13, color:'#16a34a' }}>✅ Finalized Definition:</strong>
-                          <p style={{ margin:'6px 0 0', fontSize:13, color:'#444', lineHeight:1.6 }}>{p.finalDefinition}</p>
-                        </div>
-                      )}
                     </div>
                     <div style={{ marginLeft:16 }}>
                       {p.definitionStatus==='submitted'&&<button className="btn btn-primary" type="button" onClick={() => openSelectModal(p)} style={{ whiteSpace:'nowrap' }}>✅ Select Definition</button>}
@@ -247,48 +294,84 @@ export default function FacultyDashboard() {
             </div>
           )}
 
+          {tab==='attendance' && (
+            <div className="card">
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, flexWrap:'wrap', marginBottom:16 }}>
+                <div>
+                  <h3 style={{ margin:0 }}>Mark Attendance</h3>
+                  <p style={{ margin:'4px 0 0', color:'#6b7280', fontSize:13 }}>Faculty can update attendance for each group. Students can only view it.</p>
+                </div>
+                <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+                  <select value={selectedAttendanceProject} onChange={(e) => setSelectedAttendanceProject(e.target.value)} style={{ padding:'8px 10px', borderRadius:8, border:'1px solid #d1d5db' }}>
+                    {projects.map((project) => (
+                      <option key={project._id} value={project._id}>{project.groupNo || '-'} - {project.title || 'Untitled'}</option>
+                    ))}
+                  </select>
+                  <input type="date" value={attendanceDate} onChange={(e) => setAttendanceDate(e.target.value)} style={{ padding:'8px 10px', borderRadius:8, border:'1px solid #d1d5db' }} />
+                </div>
+              </div>
+
+              {selectedAttendanceProject && (
+                <>
+                  <div style={{ overflowX:'auto' }}>
+                    <table style={{ width:'100%', minWidth:640 }}>
+                      <thead>
+                        <tr style={{ background:'#f9fafb' }}>
+                          <th style={{ textAlign:'left', padding:'10px 12px' }}>Student</th>
+                          <th style={{ textAlign:'left', padding:'10px 12px' }}>Enrollment</th>
+                          <th style={{ textAlign:'left', padding:'10px 12px' }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(projects.find((p) => p._id === selectedAttendanceProject)?.students || []).map((student) => (
+                          <tr key={student._id}>
+                            <td style={{ padding:'10px 12px' }}>{student.name}</td>
+                            <td style={{ padding:'10px 12px' }}>{student.enrollment || '-'}</td>
+                            <td style={{ padding:'10px 12px' }}>
+                              <select
+                                value={attendanceDrafts[selectedAttendanceProject]?.[student._id] || 'absent'}
+                                onChange={(e) => updateAttendanceStatus(student._id, e.target.value)}
+                                style={{ padding:'8px 10px', borderRadius:8, border:'1px solid #d1d5db', minWidth:140 }}
+                              >
+                                <option value="present">Present</option>
+                                <option value="absent">Absent</option>
+                                <option value="late">Late</option>
+                                <option value="excused">Excused</option>
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{ display:'flex', justifyContent:'flex-end', marginTop:16 }}>
+                    <button className="btn btn-primary" type="button" onClick={saveAttendance} disabled={savingAttendance}>
+                      {savingAttendance ? 'Saving...' : '💾 Save Attendance'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {tab==='definitions' && (
             <div>
               {projects.length===0&&<div className="card" style={{ textAlign:'center', color:'#888', padding:40 }}><div style={{ fontSize:48, marginBottom:12 }}>📝</div><h3>No Projects Assigned</h3></div>}
               {projects.map(p => (
-                <div className="card" key={p._id} style={{ marginBottom:20 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, paddingBottom:12, borderBottom:'1px solid #e7ebee' }}>
-                    <div>
-                      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
-                        <h3 style={{ margin:0 }}>{p.title||'Title not set'}</h3>
-                        <span style={{ background:'#0e9f8e', color:'white', padding:'2px 10px', borderRadius:20, fontSize:12, fontWeight:700 }}>{p.groupNo||'No Group'}</span>
-                      </div>
-                      <p style={{ color:'#888', fontSize:13, margin:0 }}>Students: {p.students?.map(s=>s.name).join(', ')||'None'}</p>
-                    </div>
-                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                <div className="card" key={p._id} style={{ marginBottom:12 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                      <h3 style={{ margin:0, fontSize:16 }}>{p.title||'Title not set'}</h3>
+                      <span style={{ background:'#0e9f8e', color:'white', padding:'2px 10px', borderRadius:20, fontSize:12, fontWeight:700 }}>{p.groupNo||'No Group'}</span>
                       <span className={p.definitionStatus==='finalized'?'badge badge-success':p.definitionStatus==='submitted'?'badge badge-info':'badge badge-warning'}>
                         {p.definitionStatus==='finalized'?'✅ Finalized':p.definitionStatus==='submitted'?'📤 Submitted':'⏳ Pending'}
                       </span>
+                    </div>
+                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                       {p.definitions?.length>0&&p.definitionStatus!=='finalized'&&<button className="btn btn-primary" type="button" onClick={() => openSelectModal(p)}>✅ Select & Finalize</button>}
+                      {p.definitionStatus==='finalized'&&<button className="btn btn-warning" type="button" onClick={() => openSelectModal(p)} style={{ fontSize:12 }}>✏️ Change</button>}
                     </div>
                   </div>
-
-                  {(!p.definitions||p.definitions.length===0)&&<div style={{ textAlign:'center', color:'#aaa', padding:'20px 0', fontSize:14 }}>Students have not submitted definitions yet.</div>}
-
-                  {p.definitions?.map((d, i) => (
-                    <div key={i} style={{ border:p.selectedDefinition===i?'2px solid #0e9f8e':'1px solid #e7ebee', borderRadius:12, padding:20, marginBottom:12, background:p.selectedDefinition===i?'#f0fbf9':'white', position:'relative' }}>
-                      {p.selectedDefinition===i&&<div style={{ position:'absolute', top:12, right:12, background:'#0e9f8e', color:'white', padding:'4px 12px', borderRadius:20, fontSize:12, fontWeight:700 }}>✅ Selected</div>}
-                      <div style={{ display:'inline-block', background:p.selectedDefinition===i?'#0e9f8e':'#f3f4f6', color:p.selectedDefinition===i?'white':'#6b7280', padding:'3px 12px', borderRadius:20, fontSize:12, fontWeight:700, marginBottom:10 }}>Definition {i+1}</div>
-                      <h4 style={{ margin:'0 0 8px', color:'#111', fontSize:16 }}>{d.title}</h4>
-                      <p style={{ color:'#444', fontSize:14, lineHeight:1.7, margin:'0 0 12px' }}>{d.description}</p>
-                      <div style={{ display:'flex', gap:8 }}>
-                        {d.frontend&&<span style={{ background:'#eff6ff', color:'#1d4ed8', padding:'4px 12px', borderRadius:6, fontSize:13 }}>🖥️ Frontend: {d.frontend}</span>}
-                        {d.backend&&<span style={{ background:'#fef9c3', color:'#854d0e', padding:'4px 12px', borderRadius:6, fontSize:13 }}>⚙️ Backend: {d.backend}</span>}
-                      </div>
-                    </div>
-                  ))}
-
-                  {p.finalDefinition&&(
-                    <div style={{ background:'#f0fdf4', border:'2px solid #16a34a', borderRadius:10, padding:16, marginTop:8 }}>
-                      <strong style={{ color:'#16a34a', fontSize:14 }}>✅ Your Finalized Definition:</strong>
-                      <p style={{ margin:'8px 0 0', color:'#333', fontSize:14, lineHeight:1.7 }}>{p.finalDefinition}</p>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>

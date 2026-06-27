@@ -129,7 +129,9 @@ export default function FacultyDashboard() {
       await axios.put(`${API}/api/faculty/attendance/${selectedAttendanceProject}`, { date: attendanceDate, entries }, h);
       toast.success('Attendance saved');
     } catch (err) {
-      toast.error(err.response?.data?.msg || 'Could not save attendance');
+      const message = err.response?.data?.msg || err.message || 'Could not save attendance';
+      toast.error(message);
+      console.error('Attendance save failed:', err.response?.data || err);
     } finally {
       setSavingAttendance(false);
     }

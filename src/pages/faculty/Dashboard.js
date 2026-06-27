@@ -59,8 +59,6 @@ export default function FacultyDashboard() {
             // Default to empty (not marked) instead of automatically selecting 'absent'
             draft[student._id] = res.data.attendance?.[student._id] || '';
           });
-          // Debug: log server attendance and computed draft
-          console.debug('Attendance load for project', selectedAttendanceProject, { server: res.data.attendance, draft });
           setAttendanceDrafts(prev => ({ ...prev, [selectedAttendanceProject]: draft }));
         } catch (err) {
           console.error('Attendance load error', err.response?.data || err.message);

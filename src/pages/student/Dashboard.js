@@ -257,7 +257,9 @@ export default function StudentDashboard() {
                     <tr key={index}>
                       <td style={{ padding:'10px 12px' }}>{item.date}</td>
                       <td style={{ padding:'10px 12px' }}>
-                        <span style={{ textTransform:'capitalize', fontWeight:600 }}>{item.status}</span>
+                        <span style={{ textTransform:'capitalize', fontWeight:600 }}>
+                          {item.status && item.status.trim() ? item.status : 'Not marked'}
+                        </span>
                       </td>
                     </tr>
                   ))}

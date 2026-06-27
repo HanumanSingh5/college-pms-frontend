@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
@@ -26,7 +26,7 @@ export default function FacultyDashboard() {
   const [savingAttendance, setSavingAttendance] = useState(false);
   const token = localStorage.getItem('token');
   const name  = localStorage.getItem('name') || 'Faculty';
-  const h = { headers: { Authorization: 'Bearer ' + token } };
+  const h = useMemo(() => ({ headers: { Authorization: 'Bearer ' + token } }), [token]);
   const navigate = useNavigate();
 
   const load = () => {

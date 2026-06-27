@@ -56,7 +56,8 @@ export default function FacultyDashboard() {
           });
           const draft = {};
           (res.data.project?.students || []).forEach((student) => {
-            draft[student._id] = res.data.attendance?.[student._id] || 'absent';
+            // Default to empty (not marked) instead of automatically selecting 'absent'
+            draft[student._id] = res.data.attendance?.[student._id] || '';
           });
           setAttendanceDrafts(prev => ({ ...prev, [selectedAttendanceProject]: draft }));
         } catch (err) {
@@ -131,7 +132,19 @@ export default function FacultyDashboard() {
     }
     setSavingAttendance(true);
     try {
-      const entries = Object.entries(attendanceDrafts[selectedAttendanceProject] || {}).map(([studentId, status]) => ({ studentId, status }));
+      let entries = Object.entries(attendanceDrafts[selectedAttendanceProject] || {}).map(([studentId, status]) => ({ studentId, status }));
+
+      const unmarked = entries.filter(e => !e.status).length;
+      if (unmarked > 0) {
+        const proceed = window.confirm(`There are ${unmarked} unmarked students. Save now and mark them as 'absent'? Press Cancel to mark them first.`);
+        if (!proceed) {
+          setSavingAttendance(false);
+          return;
+        }
+        // Convert unmarked entries to 'absent' when user confirms
+        entries = entries.map(e => ({ ...e, status: e.status || 'absent' }));
+      }
+
       await axios.put(`${API}/api/faculty/attendance`, { projectId: selectedAttendanceProject, date: attendanceDate, entries }, h);
       toast.success('Attendance saved');
     } catch (err) {
@@ -337,10 +350,11 @@ export default function FacultyDashboard() {
                             <td style={{ padding:'10px 12px' }}>{student.enrollment || '-'}</td>
                             <td style={{ padding:'10px 12px' }}>
                               <select
-                                value={attendanceDrafts[selectedAttendanceProject]?.[student._id] || 'absent'}
+                                value={attendanceDrafts[selectedAttendanceProject]?.[student._id] ?? ''}
                                 onChange={(e) => updateAttendanceStatus(student._id, e.target.value)}
                                 style={{ padding:'8px 10px', borderRadius:8, border:'1px solid #d1d5db', minWidth:140 }}
                               >
+                                <option value="">Not marked</option>
                                 <option value="present">Present</option>
                                 <option value="absent">Absent</option>
                                 <option value="late">Late</option>

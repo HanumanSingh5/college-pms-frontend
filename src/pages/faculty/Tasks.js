@@ -32,9 +32,9 @@ export default function FacultyTasks() {
   const [viewTask,   setViewTask]   = useState(null);
   const [feedbackText, setFeedbackText] = useState({});   // { studentId: 'text' }
   const [sendingFeedback, setSendingFeedback] = useState({});
+  const [pdfPreview, setPdfPreview]       = useState(null); // { url, name }
   const [remarks,    setRemarks]    = useState({});  // { submissionIndex: text }
   const [savingRemark, setSavingRemark] = useState(null);
-  const [pdfPreview, setPdfPreview] = useState(null); // URL to preview in modal
   const [form,       setForm]       = useState({ title:'', description:'', phase:'', projectId:'', dueDate:'' });
   const [editForm,   setEditForm]   = useState({ title:'', description:'', dueDate:'', status:'' });
 
@@ -505,12 +505,12 @@ export default function FacultyTasks() {
                   {(sub.document || sub.fileUrl) && (() => {
                     const rawUrl = (sub.document || sub.fileUrl || '').replace('/image/upload/', '/raw/upload/');
                     const dlName = (sub.student?.name||'student').replace(/\s+/g,'_') + '_' + rawUrl.split('/').pop();
+                    const proxyUrl = `${API}/api/faculty/download?url=${encodeURIComponent(rawUrl)}&name=${encodeURIComponent(dlName)}&preview=1`;
                     const downloadUrl = `${API}/api/faculty/download?url=${encodeURIComponent(rawUrl)}&name=${encodeURIComponent(dlName)}`;
-                    // Use Google Docs Viewer to render the PDF inline (works cross-origin)
-                    const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(rawUrl)}&embedded=true`;
                     return (
                       <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap' }}>
-                        <button type="button" onClick={() => setPdfPreview(googleViewerUrl)}
+                        <button type="button"
+                          onClick={() => setPdfPreview({ url: proxyUrl, name: dlName })}
                           style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'8px 16px', background:'#eff6ff', color:'#1d4ed8', border:'1px solid #bfdbfe', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
                           👁️ Preview PDF
                         </button>
@@ -561,27 +561,34 @@ export default function FacultyTasks() {
           </div>
         </div>
       )}
-      {/* PDF Preview Modal */}
+      {/* ── PDF PREVIEW MODAL ── */}
       {pdfPreview && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <div style={{ background:'white', borderRadius:12, width:'90vw', height:'90vh', display:'flex', flexDirection:'column', overflow:'hidden' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 20px', borderBottom:'1px solid #e7ebee' }}>
-              <strong style={{ fontSize:15 }}>📄 PDF Preview</strong>
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', display:'flex', flexDirection:'column', zIndex:10000 }}>
+          {/* Header */}
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 24px', background:'white', borderBottom:'1px solid #e2e8f0', flexShrink:0 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontSize:20 }}>📄</span>
+              <span style={{ fontWeight:700, color:'#1e1b4b', fontSize:15 }}>PDF Preview</span>
+              <span style={{ color:'#94a3b8', fontSize:12 }}>{pdfPreview.name}</span>
+            </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <a href={pdfPreview.url.replace('&preview=1','')} target="_blank" rel="noreferrer"
+                style={{ padding:'8px 16px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'white', borderRadius:8, fontSize:13, fontWeight:600, textDecoration:'none', display:'inline-flex', alignItems:'center', gap:6 }}>
+                📥 Download
+              </a>
               <button type="button" onClick={() => setPdfPreview(null)}
-                style={{ background:'#f1f5f9', border:'none', borderRadius:8, padding:'6px 14px', cursor:'pointer', fontWeight:600, fontSize:13 }}>
+                style={{ padding:'8px 16px', background:'#fee2e2', color:'#dc2626', border:'none', borderRadius:8, cursor:'pointer', fontWeight:700, fontSize:13 }}>
                 ✕ Close
               </button>
             </div>
-            <div style={{ flex:1, position:'relative' }}>
-              <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', color:'#888', fontSize:14, zIndex:0 }}>
-                ⏳ Loading preview...
-              </div>
-              <iframe
-                src={pdfPreview}
-                title="PDF Preview"
-                style={{ position:'relative', zIndex:1, width:'100%', height:'100%', border:'none' }}
-              />
-            </div>
+          </div>
+          {/* PDF iframe */}
+          <div style={{ flex:1, overflow:'hidden' }}>
+            <iframe
+              src={pdfPreview.url}
+              style={{ width:'100%', height:'100%', border:'none', background:'white' }}
+              title="PDF Preview"
+            />
           </div>
         </div>
       )}

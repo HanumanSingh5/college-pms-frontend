@@ -21,11 +21,29 @@ export default function StudentDashboard() {
   const navigate = useNavigate();
   const projectInfoRef = useRef(null);
 
+  const flattenGroupMembers = (proj) => {
+    const all = [];
+    (proj?.students || []).forEach((student) => {
+      all.push(student);
+      if (Array.isArray(student.teamMembers)) {
+        student.teamMembers.forEach((tm, idx) => {
+          all.push({
+            ...tm,
+            _id: tm._id || tm.enrollment || `${student._id || proj._id}-tm-${idx}`,
+          });
+        });
+      }
+    });
+    return all;
+  };
+
   const load = () => {
     axios.get(`${process.env.REACT_APP_API_URL}/api/student/stats`,   h).then(r => setStats(r.data));
-    axios.get(`${process.env.REACT_APP_API_URL}/api/student/project`, h).then(r => setProject(r.data));
+    axios.get(`${process.env.REACT_APP_API_URL}/api/student/attendance`, h).then(r => {
+      if (r.data.project) setProject(r.data.project);
+      setAttendance(r.data.attendance || []);
+    });
     axios.get(`${process.env.REACT_APP_API_URL}/api/student/profile`, h).then(r => setProfile(r.data));
-    axios.get(`${process.env.REACT_APP_API_URL}/api/student/attendance`, h).then(r => setAttendance(r.data.attendance || []));
   };
 
   useEffect(() => {
@@ -245,26 +263,33 @@ export default function StudentDashboard() {
             {attendance.length === 0 ? (
               <p style={{ margin:0, color:'#6b7280' }}>No attendance records yet.</p>
             ) : (
-              <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                <thead>
-                  <tr style={{ background:'#f9fafb' }}>
-                    <th style={{ textAlign:'left', padding:'10px 12px' }}>Date</th>
-                    <th style={{ textAlign:'left', padding:'10px 12px' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {attendance.map((item, index) => (
-                    <tr key={index}>
-                      <td style={{ padding:'10px 12px' }}>{item.date}</td>
-                      <td style={{ padding:'10px 12px' }}>
-                        <span style={{ textTransform:'capitalize', fontWeight:600 }}>
-                          {item.status && item.status.trim() ? item.status : 'Not marked'}
-                        </span>
-                      </td>
+              <div style={{ overflowX:'auto' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse', minWidth:640 }}>
+                  <thead>
+                    <tr style={{ background:'#f9fafb' }}>
+                      <th style={{ textAlign:'left', padding:'10px 12px' }}>Member</th>
+                      <th style={{ textAlign:'left', padding:'10px 12px' }}>Enrollment</th>
+                      <th style={{ textAlign:'left', padding:'10px 12px' }}>Date</th>
+                      <th style={{ textAlign:'left', padding:'10px 12px' }}>Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {flattenGroupMembers(project).map((member) => {
+                      const records = attendance.filter((item) => item.studentId === member._id || item.enrollment === member.enrollment || item.name === member.name);
+                      return records.map((item, index) => (
+                        <tr key={`${member._id}-${item.date}-${index}`}>
+                          <td style={{ padding:'10px 12px' }}>{member.name || 'Unnamed'}</td>
+                          <td style={{ padding:'10px 12px' }}>{member.enrollment || '-'}</td>
+                          <td style={{ padding:'10px 12px' }}>{item.date}</td>
+                          <td style={{ padding:'10px 12px', textTransform:'capitalize', fontWeight:600 }}>
+                            {item.status && item.status.trim() ? item.status : 'Not marked'}
+                          </td>
+                        </tr>
+                      ));
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 

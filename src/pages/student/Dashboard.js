@@ -274,19 +274,23 @@ export default function StudentDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {flattenGroupMembers(project).map((member) => {
-                      const records = attendance.filter((item) => item.studentId === member._id || item.enrollment === member.enrollment || item.name === member.name);
-                      return records.map((item, index) => (
-                        <tr key={`${member._id}-${item.date}-${index}`}>
-                          <td style={{ padding:'10px 12px' }}>{member.name || 'Unnamed'}</td>
-                          <td style={{ padding:'10px 12px' }}>{member.enrollment || '-'}</td>
-                          <td style={{ padding:'10px 12px' }}>{item.date}</td>
-                          <td style={{ padding:'10px 12px', textTransform:'capitalize', fontWeight:600 }}>
-                            {item.status && item.status.trim() ? item.status : 'Not marked'}
-                          </td>
-                        </tr>
-                      ));
-                    })}
+                    {(() => {
+                      const members = flattenGroupMembers(project);
+                      const memberById = Object.fromEntries(members.map((member) => [member._id, member]));
+                      return attendance.map((item, index) => {
+                        const member = memberById[item.student] || {};
+                        return (
+                          <tr key={`${item.student}-${item.date}-${index}`}>
+                            <td style={{ padding:'10px 12px' }}>{member.name || 'Unknown Member'}</td>
+                            <td style={{ padding:'10px 12px' }}>{member.enrollment || '-'}</td>
+                            <td style={{ padding:'10px 12px' }}>{item.date}</td>
+                            <td style={{ padding:'10px 12px', textTransform:'capitalize', fontWeight:600 }}>
+                              {item.status && item.status.trim() ? item.status : 'Not marked'}
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
                   </tbody>
                 </table>
               </div>

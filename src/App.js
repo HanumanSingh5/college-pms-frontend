@@ -1,6 +1,6 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
+import React, { useEffect, useRef, useCallback } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 
@@ -40,13 +40,55 @@ function RoleRedirect() {
   return <Navigate to="/login" replace />;
 }
 
+function LogoutOnInactivity({ children }) {
+  const navigate = useNavigate();
+  const timeoutRef = useRef(null);
+  const INACTIVITY_MS = 30 * 60 * 1000; // 30 minutes
+
+  const logout = useCallback(() => {
+    localStorage.clear();
+    toast.info('Session expired due to inactivity. Please login again.');
+    navigate('/login');
+  }, [navigate]);
+
+  const resetTimer = useCallback(() => {
+    const role = localStorage.getItem('role');
+    const token = localStorage.getItem('token');
+    if (role !== 'student' || !token) {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      return;
+    }
+
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      const currentToken = localStorage.getItem('token');
+      const currentRole = localStorage.getItem('role');
+      if (currentToken && currentRole === 'student') logout();
+    }, INACTIVITY_MS);
+  }, [logout]);
+
+  useEffect(() => {
+    const events = ['mousemove', 'keydown', 'click', 'touchstart'];
+    events.forEach((event) => window.addEventListener(event, resetTimer));
+    resetTimer();
+
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      events.forEach((event) => window.removeEventListener(event, resetTimer));
+    };
+  }, [resetTimer]);
+
+  return children;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <ToastContainer position="top-right" autoClose={3000} />
-      <Routes>
-        <Route path="/login"           element={<Login />} />
-        <Route path="/register/:token" element={<Register />} />
+      <LogoutOnInactivity>
+        <Routes>
+          <Route path="/login"           element={<Login />} />
+          <Route path="/register/:token" element={<Register />} />
 
         <Route path="/admin" element={
           <PrivateRoute allowedRole="admin"><AdminDashboard /></PrivateRoute>} />

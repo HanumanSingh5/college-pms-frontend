@@ -44,11 +44,7 @@ export default function Login() {
           <span className="brand-mark">🎓</span>
           <div>
             <h2>College PMS</h2>
-            <div className="subtitle">Project Management System</div>
           </div>
-        </div>
-        <div className="intro">
-          <strong>Welcome back</strong>
         </div>
         <form onSubmit={submit}>
           <div className="form-group">

@@ -29,11 +29,6 @@ export default function Navbar({ title }) {
         </div>
       </div>
       <div className="navbar-actions">
-        <span className="user-pill">{roleLabel[role] || role}</span>
-        <div className="user-meta">
-          <div className="avatar">{initial}</div>
-          <span>{name}</span>
-        </div>
         <button onClick={logout} type="button">Logout</button>
       </div>
     </div>

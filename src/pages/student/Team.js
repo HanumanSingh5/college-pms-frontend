@@ -47,11 +47,32 @@ export default function StudentTeam() {
     });
   };
 
+  // When a student has no existing team, pre-fill the first member with their own profile
+  useEffect(() => {
+    if (!profile) return;
+    if (!profile.teamMembers || profile.teamMembers.length === 0) {
+      const selfMember = {
+        name: profile.name || '',
+        email: profile.email || '',
+        enrollment: profile.enrollment || '',
+        mobile: profile.mobile || '',
+        studentClass: profile.studentClass || '',
+      };
+      setMembers(current => {
+        // if the current members are default empty or only emptyMember, replace with selfMember
+        if (!current || (current.length === 1 && Object.values(current[0]).every(v => !v))) {
+          return [selfMember];
+        }
+        return current;
+      });
+    }
+  }, [profile]);
+
   useEffect(() => { load(); }, []);
 
   const addMember = () => {
     if (locked) return;
-    if (members.length >= 5) return toast.error('Maximum 5 team members allowed');
+    if (members.length >= 7) return toast.error('Maximum 7 team members allowed');
     setMembers([...members, { ...emptyMember }]);
   };
 
@@ -173,13 +194,13 @@ export default function StudentTeam() {
                 Add details of all students in your project group
               </p>
             </div>
-            {!locked && (
-              <button type="button" className="btn btn-primary"
-                onClick={addMember}
-                disabled={members.length >= 5}>
-                + Add Member
-              </button>
-            )}
+                    !locked && (
+                      <button type="button" className="btn btn-primary"
+                        onClick={addMember}
+                        disabled={members.length >= 7}>
+                        + Add Member
+                      </button>
+                    )}
           </div>
 
           {locked ? (
@@ -375,10 +396,10 @@ export default function StudentTeam() {
               );
             })}
 
-            {!locked && (
+                {!locked && (
               <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:8 }}>
                 <button type="button" className="btn btn-primary"
-                  onClick={addMember} disabled={members.length >= 5}
+                  onClick={addMember} disabled={members.length >= 7}
                   style={{ padding:'10px 20px' }}>
                   + Add Another Member
                 </button>

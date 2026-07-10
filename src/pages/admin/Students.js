@@ -33,6 +33,7 @@ export default function AdminStudents() {
   const [uploadResults, setUploadResults]     = useState(null);
   const [newPassword, setNewPassword]         = useState('');
   const [searchTerm, setSearchTerm]           = useState('');
+  const [branchFilter, setBranchFilter]       = useState('all');
   const [editForm, setEditForm] = useState({
     name:'', email:'', password:'', enrollment:'', mobile:'', studentClass:''
   });
@@ -40,6 +41,20 @@ export default function AdminStudents() {
   const h = { headers: { Authorization: 'Bearer ' + token } };
 
   const LIVE_URL = 'https://college-pms-frontend.vercel.app';
+
+  const branchMapping = {
+    '502': 'CE',
+    '504': 'IT',
+    '509': 'AIML',
+    '510': 'CC',
+    '511': 'GA',
+    '513': 'CSE',
+  };
+
+  const getBranch = (enrollment = '') => {
+    const match = enrollment && enrollment.toString().match(/502|504|509|510|511|513/);
+    return match ? branchMapping[match[0]] : 'Unknown';
+  };
 
   const load = () => {
     axios.get(`${API}/api/admin/students`, h)
@@ -198,10 +213,11 @@ export default function AdminStudents() {
   };
 
   const filtered = students.filter(s =>
-    (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ((s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (s.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (s.enrollment || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (s.studentClass || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (s.studentClass || '').toLowerCase().includes(searchTerm.toLowerCase())) &&
+    (branchFilter === 'all' || getBranch(s.enrollment) === branchFilter)
   );
 
   return (
@@ -227,18 +243,34 @@ export default function AdminStudents() {
             <strong>Student Registration:</strong> Generate a link → Share it with student manually → Student opens link and fills their own email, name, enrollment &amp; sets password.
             If student forgets password, use <strong>🔑 Password</strong> button below.
           </div>
+          <div style={{ display:'flex', gap:12, alignItems:'center', marginBottom:16, flexWrap:'wrap' }}>
+            <div style={{ flex:1, minWidth:220 }}>
+              <input type="text"
+                placeholder="Search by name, email, enrollment or class..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                style={{
+                  width:'100%', padding:'10px 16px',
+                  border:'1px solid #d1d5db', borderRadius:8,
+                  fontSize:14, marginBottom:0,
+                  outline:'none', boxSizing:'border-box'
+                }}
+              />
+            </div>
 
-          <input type="text"
-            placeholder="Search by name, email, enrollment or class..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            style={{
-              width:'100%', padding:'10px 16px',
-              border:'1px solid #d1d5db', borderRadius:8,
-              fontSize:14, marginBottom:16,
-              outline:'none', boxSizing:'border-box'
-            }}
-          />
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <label style={{ fontSize:13, color:'#4b5563', fontWeight:500 }}>Branch:</label>
+              <select value={branchFilter} onChange={e => setBranchFilter(e.target.value)} style={{ padding:'10px 14px', border:'1px solid #d1d5db', borderRadius:8, fontSize:14, outline:'none' }}>
+                <option value="all">All Branches</option>
+                <option value="CE">CE</option>
+                <option value="IT">IT</option>
+                <option value="AIML">AIML</option>
+                <option value="CC">CC</option>
+                <option value="GA">GA</option>
+                <option value="CSE">CSE</option>
+              </select>
+            </div>
+          </div>
 
           <div className="card" style={{ overflowX:'auto' }}>
             <table style={{ minWidth:1000 }}>

@@ -43,7 +43,8 @@ export default function FacultyDashboard() {
 
   useEffect(() => {
     if (tab === 'attendance' && projects.length > 0 && !selectedAttendanceProject) {
-      setSelectedAttendanceProject(projects[0]._id);
+      const sorted = projects.slice().sort(compareGroupNo);
+      if (sorted.length > 0) setSelectedAttendanceProject(sorted[0]._id);
     }
   }, [tab, projects, selectedAttendanceProject]);
 
@@ -69,6 +70,8 @@ export default function FacultyDashboard() {
               });
             }
           });
+          // sort students and team members by name for consistent ascending order
+          allStudents.sort((a, b) => (a?.name || '').toString().toLowerCase().localeCompare((b?.name || '').toString().toLowerCase()));
           allStudents.forEach((student) => {
             // Default to empty (not marked) instead of automatically selecting 'absent'
             draft[student._id] = res.data.attendance?.[student._id] || '';
@@ -157,7 +160,30 @@ export default function FacultyDashboard() {
         });
       }
     });
-    return all;
+    return all.sort((a, b) => (a?.name || '').toString().toLowerCase().localeCompare((b?.name || '').toString().toLowerCase()));
+  };
+
+  const parseGroupNo = (groupNo = '') => {
+    const match = groupNo && groupNo.toString().match(/\d+/);
+    return match ? parseInt(match[0], 10) : null;
+  };
+
+  const compareGroupNo = (a, b) => {
+    if (!a.groupNo && !b.groupNo) return 0;
+    if (!a.groupNo) return 1;
+    if (!b.groupNo) return -1;
+    const aNum = parseGroupNo(a.groupNo);
+    const bNum = parseGroupNo(b.groupNo);
+    if (aNum !== null && bNum !== null) {
+      return aNum - bNum || a.groupNo.localeCompare(b.groupNo);
+    }
+    return a.groupNo.localeCompare(b.groupNo);
+  };
+
+  const compareByName = (x, y) => {
+    const a = (x?.name || '').toString().toLowerCase();
+    const b = (y?.name || '').toString().toLowerCase();
+    return a.localeCompare(b);
   };
 
   const saveAttendance = async () => {
@@ -274,7 +300,7 @@ export default function FacultyDashboard() {
           {tab==='projects' && (
             <div>
               {projects.length===0&&<div className="card" style={{ textAlign:'center', color:'#888', padding:40 }}><div style={{ fontSize:48, marginBottom:12 }}>📭</div><h3>No Projects Assigned Yet</h3></div>}
-              {projects.map(p => (
+              {projects.slice().sort(compareGroupNo).map(p => (
                 <div className="card" key={p._id} style={{ marginBottom:16 }}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
                     <div style={{ flex:1 }}>
@@ -290,7 +316,7 @@ export default function FacultyDashboard() {
                         {p.backend&&<span style={{ background:'#fef9c3', color:'#854d0e', padding:'2px 10px', borderRadius:6, fontSize:12 }}>Backend: {p.backend}</span>}
                       </div>
                       <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                        {p.students?.map(s => <span key={s._id} style={{ background:'#f0fbf9', padding:'3px 10px', borderRadius:6, fontSize:12 }}>{s.name} ({s.enrollment||'-'})</span>)}
+                        {p.students?.slice().sort(compareByName).map(s => <span key={s._id} style={{ background:'#f0fbf9', padding:'3px 10px', borderRadius:6, fontSize:12 }}>{s.name} ({s.enrollment||'-'})</span>)}
                       </div>
                     </div>
                     <div style={{ marginLeft:16 }}>
@@ -309,10 +335,10 @@ export default function FacultyDashboard() {
               <table style={{ minWidth:900 }}>
                 <thead><tr><th>#</th><th>Group</th><th>Name</th><th>Enrollment</th><th>Class</th><th>Email</th><th>Mobile</th><th>Role</th></tr></thead>
                 <tbody>
-                  {projects.flatMap((p, pi) => {
+                  {projects.slice().sort(compareGroupNo).flatMap((p, pi) => {
                     const rows = [];
                     let counter = 0;
-                    (p.students || []).forEach((s) => {
+                    (p.students || []).slice().sort(compareByName).forEach((s) => {
                       counter++;
                       rows.push(
                         <tr key={p._id + s._id + '-leader'}>
@@ -326,7 +352,7 @@ export default function FacultyDashboard() {
                           <td><span style={{ background:'#ede9fe', color:'#5b21b6', padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:600 }}>Team Leader</span></td>
                         </tr>
                       );
-                      (s.teamMembers || []).forEach((tm, ti) => {
+                      (s.teamMembers || []).slice().sort(compareByName).forEach((tm, ti) => {
                         counter++;
                         rows.push(
                           <tr key={p._id + s._id + '-tm-' + ti} style={{ background:'#fafafa' }}>
@@ -359,7 +385,7 @@ export default function FacultyDashboard() {
                 </div>
                 <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
                   <select value={selectedAttendanceProject} onChange={(e) => setSelectedAttendanceProject(e.target.value)} style={{ padding:'8px 10px', borderRadius:8, border:'1px solid #d1d5db' }}>
-                    {projects.map((project) => (
+                    {projects.slice().sort(compareGroupNo).map((project) => (
                       <option key={project._id} value={project._id}>{project.groupNo || '-'} - {project.title || 'Untitled'}</option>
                     ))}
                   </select>
@@ -470,7 +496,7 @@ export default function FacultyDashboard() {
           {tab==='definitions' && (
             <div>
               {projects.length===0&&<div className="card" style={{ textAlign:'center', color:'#888', padding:40 }}><div style={{ fontSize:48, marginBottom:12 }}>📝</div><h3>No Projects Assigned</h3></div>}
-              {projects.map(p => (
+              {projects.slice().sort(compareGroupNo).map(p => (
                 <div className="card" key={p._id} style={{ marginBottom:12 }}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                     <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>

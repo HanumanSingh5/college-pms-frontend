@@ -120,6 +120,7 @@ export default function App() {
 
         <Route path="*" element={<RoleRedirect />} />
       </Routes>
+      </LogoutOnInactivity>
     </BrowserRouter>
   );
 }

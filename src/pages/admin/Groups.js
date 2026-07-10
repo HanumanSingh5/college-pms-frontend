@@ -26,8 +26,23 @@ export default function AdminGroups() {
   const [teamForm, setTeamForm]     = useState([]);
   const [saving, setSaving]         = useState(false);
   const [search, setSearch]         = useState('');
+  const [branchFilter, setBranchFilter] = useState('all');
   const token = localStorage.getItem('token');
   const h = { headers: { Authorization: 'Bearer ' + token } };
+
+  const branchMapping = {
+    '502': 'CE',
+    '504': 'IT',
+    '509': 'AIML',
+    '510': 'CC',
+    '511': 'GA',
+    '513': 'CSE',
+  };
+
+  const getBranch = (enrollment = '') => {
+    const match = enrollment && enrollment.toString().match(/502|504|509|510|511|513/);
+    return match ? branchMapping[match[0]] : 'Unknown';
+  };
 
   const load = () => {
     axios.get(`${API}/api/admin/student-groups`, h).then(r => setGroups(r.data)).catch(() => {});
@@ -112,9 +127,10 @@ export default function AdminGroups() {
   const tdStyle = { padding:'7px 10px', border:'1px solid #e5e7eb', fontSize:12, color:'#374151' };
 
   const filtered = groups.filter(g =>
-    g.student?.name?.toLowerCase().includes(search.toLowerCase()) ||
+    (g.student?.name?.toLowerCase().includes(search.toLowerCase()) ||
     g.student?.enrollment?.toLowerCase().includes(search.toLowerCase()) ||
-    (g.groupNo || '').toLowerCase().includes(search.toLowerCase())
+    (g.groupNo || '').toLowerCase().includes(search.toLowerCase())) &&
+    (branchFilter === 'all' || getBranch(g.student?.enrollment) === branchFilter)
   );
 
   const assigned   = filtered.filter(g => g.faculty);
@@ -139,10 +155,24 @@ export default function AdminGroups() {
             </div>
           </div>
 
-          <div style={{ borderBottom:'1px solid #e5e7eb', marginBottom:16, display:'flex', gap:4 }}>
-            <button style={tabStyle('groups')}     onClick={() => setTab('groups')}     type="button">All Groups ({groups.length})</button>
-            <button style={tabStyle('unassigned')} onClick={() => setTab('unassigned')} type="button">Unassigned ({unassigned.length})</button>
-            <button style={tabStyle('assigned')}   onClick={() => setTab('assigned')}   type="button">Assigned ({assigned.length})</button>
+          <div style={{ borderBottom:'1px solid #e5e7eb', marginBottom:16, display:'flex', gap:4, flexWrap:'wrap', alignItems:'center', justifyContent:'space-between' }}>
+            <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
+              <button style={tabStyle('groups')}     onClick={() => setTab('groups')}     type="button">All Groups ({groups.length})</button>
+              <button style={tabStyle('unassigned')} onClick={() => setTab('unassigned')} type="button">Unassigned ({unassigned.length})</button>
+              <button style={tabStyle('assigned')}   onClick={() => setTab('assigned')}   type="button">Assigned ({assigned.length})</button>
+            </div>
+            <div style={{ display:'flex', gap:12, flexWrap:'wrap', alignItems:'center' }}>
+              <label style={{ fontSize:13, color:'#4b5563', fontWeight:500 }}>Branch:</label>
+              <select value={branchFilter} onChange={e => setBranchFilter(e.target.value)} style={{ padding:'10px 14px', border:'1px solid #d1d5db', borderRadius:8, fontSize:14, outline:'none' }}>
+                <option value="all">All Branches</option>
+                <option value="CE">CE</option>
+                <option value="IT">IT</option>
+                <option value="AIML">AIML</option>
+                <option value="CC">CC</option>
+                <option value="GA">GA</option>
+                <option value="CSE">CSE</option>
+              </select>
+            </div>
           </div>
 
           <input type="text" placeholder="Search by student name, enrollment or group number..."
@@ -169,6 +199,9 @@ export default function AdminGroups() {
                       <span style={{ background:'#f3f4f6', color:'#9ca3af', padding:'3px 12px', borderRadius:20, fontSize:13 }}>No Group No.</span>
                     )}
                     <span style={{ fontWeight:600, fontSize:16 }}>{g.student.name}'s Group</span>
+                    <span style={{ background:'#eff6ff', color:'#1d4ed8', padding:'2px 10px', borderRadius:20, fontSize:12, fontWeight:600 }}>
+                      {getBranch(g.student?.enrollment)}
+                    </span>
                     <span style={{ background: g.faculty ? '#dcfce7' : '#fef9c3', color: g.faculty ? '#166534' : '#854d0e', padding:'2px 10px', borderRadius:20, fontSize:12, fontWeight:600 }}>
                       {g.faculty ? 'Assigned to ' + g.faculty.name : 'Not Assigned'}
                     </span>

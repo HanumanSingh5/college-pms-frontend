@@ -44,6 +44,23 @@ export default function AdminGroups() {
     return match ? branchMapping[match[0]] : 'Unknown';
   };
 
+  const parseGroupNo = (groupNo = '') => {
+    const match = groupNo && groupNo.toString().match(/\d+/);
+    return match ? parseInt(match[0], 10) : null;
+  };
+
+  const compareGroupNo = (a, b) => {
+    if (!a.groupNo && !b.groupNo) return 0;
+    if (!a.groupNo) return 1;
+    if (!b.groupNo) return -1;
+    const aNum = parseGroupNo(a.groupNo);
+    const bNum = parseGroupNo(b.groupNo);
+    if (aNum !== null && bNum !== null) {
+      return aNum - bNum || a.groupNo.localeCompare(b.groupNo);
+    }
+    return a.groupNo.localeCompare(b.groupNo);
+  };
+
   const load = () => {
     axios.get(`${API}/api/admin/student-groups`, h).then(r => setGroups(r.data)).catch(() => {});
     axios.get(`${API}/api/admin/faculties`, h).then(r => setFaculties(r.data)).catch(() => {});
@@ -58,12 +75,14 @@ export default function AdminGroups() {
 
   const assignGroup = async (e) => {
     e.preventDefault();
+    const normalizedGroupNo = assignForm.groupNo.trim().toUpperCase();
+    if (!normalizedGroupNo) return toast.error('Group number is required.');
     setSaving(true);
     try {
       await axios.post(`${API}/api/admin/assign-group`, {
         studentId: assignModal.student._id,
         facultyId: assignForm.facultyId,
-        groupNo:   assignForm.groupNo,
+        groupNo:   normalizedGroupNo,
       }, h);
       toast.success('Group assigned to faculty!');
       setAssignModal(null);
@@ -126,12 +145,15 @@ export default function AdminGroups() {
   const thStyle = { padding:'8px 10px', textAlign:'left', border:'1px solid #e5e7eb', background:'#f9fafb', fontWeight:600, fontSize:12, color:'#374151' };
   const tdStyle = { padding:'7px 10px', border:'1px solid #e5e7eb', fontSize:12, color:'#374151' };
 
-  const filtered = groups.filter(g =>
-    (g.student?.name?.toLowerCase().includes(search.toLowerCase()) ||
-    g.student?.enrollment?.toLowerCase().includes(search.toLowerCase()) ||
-    (g.groupNo || '').toLowerCase().includes(search.toLowerCase())) &&
-    (branchFilter === 'all' || getBranch(g.student?.enrollment) === branchFilter)
-  );
+  const filtered = groups
+    .slice()
+    .sort(compareGroupNo)
+    .filter(g =>
+      (g.student?.name?.toLowerCase().includes(search.toLowerCase()) ||
+      g.student?.enrollment?.toLowerCase().includes(search.toLowerCase()) ||
+      (g.groupNo || '').toLowerCase().includes(search.toLowerCase())) &&
+      (branchFilter === 'all' || getBranch(g.student?.enrollment) === branchFilter)
+    );
 
   const assigned   = filtered.filter(g => g.faculty);
   const unassigned = filtered.filter(g => !g.faculty);

@@ -186,6 +186,18 @@ export default function FacultyDashboard() {
     return a.localeCompare(b);
   };
 
+  const parseEnrollmentNum = (enr = '') => {
+    const m = enr && enr.toString().match(/\d+/);
+    return m ? parseInt(m[0], 10) : null;
+  };
+
+  const compareByEnrollment = (a, b) => {
+    const an = parseEnrollmentNum(a?.enrollment || a?._id || '');
+    const bn = parseEnrollmentNum(b?.enrollment || b?._id || '');
+    if (an !== null && bn !== null) return an - bn;
+    return compareByName(a, b);
+  };
+
   const saveAttendance = async () => {
     if (!selectedAttendanceProject) {
       toast.error('Please select a project group first');
@@ -352,7 +364,7 @@ export default function FacultyDashboard() {
                           <td><span style={{ background:'#ede9fe', color:'#5b21b6', padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:600 }}>Team Leader</span></td>
                         </tr>
                       );
-                      (s.teamMembers || []).slice().sort(compareByName).forEach((tm, ti) => {
+                      (s.teamMembers || []).slice().sort(compareByEnrollment).forEach((tm, ti) => {
                         counter++;
                         rows.push(
                           <tr key={p._id + s._id + '-tm-' + ti} style={{ background:'#fafafa' }}>

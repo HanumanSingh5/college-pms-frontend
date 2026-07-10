@@ -19,7 +19,8 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const [stats, setStats]       = useState({ faculties:0, students:0, projects:0, tasks:0 });
   const [projects, setProjects] = useState([]);
-  const [tab, setTab]           = useState('overview');
+  const [tab, setTab]           = useState('definitions');
+  const [branchFilter, setBranchFilter] = useState('all');
   const token = localStorage.getItem('token');
   const h = { headers: { Authorization: `Bearer ${token}` } };
 
@@ -37,6 +38,37 @@ export default function AdminDashboard() {
   });
 
   const withDefinitions = projects.filter(p => p.definition);
+
+  const branchMapping = {
+    '502': 'CE',
+    '504': 'IT',
+    '509': 'AIML',
+    '510': 'CC',
+    '511': 'GA',
+    '513': 'CSE',
+  };
+
+  const getBranch = (enrollment = '') => {
+    const match = enrollment && enrollment.toString().match(/502|504|509|510|511|513/);
+    return match ? branchMapping[match[0]] : 'Unknown';
+  };
+
+  const parseGroupNo = (groupNo = '') => {
+    const match = groupNo && groupNo.toString().match(/\d+/);
+    return match ? parseInt(match[0], 10) : null;
+  };
+
+  const compareGroupNo = (a, b) => {
+    if (!a.groupNo && !b.groupNo) return 0;
+    if (!a.groupNo) return 1;
+    if (!b.groupNo) return -1;
+    const aNum = parseGroupNo(a.groupNo);
+    const bNum = parseGroupNo(b.groupNo);
+    if (aNum !== null && bNum !== null) {
+      return aNum - bNum || a.groupNo.localeCompare(b.groupNo);
+    }
+    return a.groupNo.localeCompare(b.groupNo);
+  };
 
   return (
     <div>
@@ -72,22 +104,33 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div style={{ borderBottom:'1px solid #e5e7eb', marginBottom:20, display:'flex', gap:4 }}>
-            <button style={tabStyle('overview')} onClick={() => setTab('overview')}>
-              📊 Overview
-            </button>
-            <button style={tabStyle('definitions')} onClick={() => setTab('definitions')}>
-              📝 Student Definitions
-              {withDefinitions.length > 0 && (
-                <span style={{
-                  background:'#4f46e5', color:'white',
-                  borderRadius:'50%', fontSize:11,
-                  padding:'1px 6px', marginLeft:6
-                }}>
-                  {withDefinitions.length}
-                </span>
-              )}
-            </button>
+          <div style={{ borderBottom:'1px solid #e5e7eb', marginBottom:20, display:'flex', gap:4, alignItems:'center', justifyContent:'space-between' }}>
+            <div style={{ display:'flex', gap:8 }}>
+              <button style={tabStyle('definitions')} onClick={() => setTab('definitions')}>
+                📝 Student Definitions
+                {withDefinitions.length > 0 && (
+                  <span style={{
+                    background:'#4f46e5', color:'white',
+                    borderRadius:'50%', fontSize:11,
+                    padding:'1px 6px', marginLeft:6
+                  }}>
+                    {withDefinitions.length}
+                  </span>
+                )}
+              </button>
+            </div>
+            <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+              <label style={{ fontSize:13, color:'#4b5563', fontWeight:500 }}>Branch:</label>
+              <select value={branchFilter} onChange={e => setBranchFilter(e.target.value)} style={{ padding:'8px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:14 }}>
+                <option value="all">All Branches</option>
+                <option value="CE">CE</option>
+                <option value="IT">IT</option>
+                <option value="AIML">AIML</option>
+                <option value="CC">CC</option>
+                <option value="GA">GA</option>
+                <option value="CSE">CSE</option>
+              </select>
+            </div>
           </div>
 
           {tab === 'overview' && (
@@ -144,15 +187,27 @@ export default function AdminDashboard() {
                 Faculty will review and finalize them.
               </p>
 
-              {withDefinitions.length === 0 && (
-                <div className="card" style={{ textAlign:'center', color:'#888', padding:40 }}>
-                  <div style={{ fontSize:48, marginBottom:12 }}>📭</div>
-                  <h3>No Definitions Submitted Yet</h3>
-                  <p>Students will submit their project definitions after logging in.</p>
+              {withDefinitions.filter(p => {
+                if (branchFilter === 'all') return true;
+                const enrollment = p.students && p.students.length > 0 ? p.students[0].enrollment : '';
+                return getBranch(enrollment) === branchFilter;
+              }).slice().sort(compareGroupNo).length === 0 && (
+                <div className="card" style={{ textAlign:'center', color:'#666', padding:40, display:'flex', flexDirection:'column', alignItems:'center', gap:12 }}>
+                  <div style={{ width:92, height:92, borderRadius:20, background:'linear-gradient(135deg,#eef2ff,#e0f2fe)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:44 }}>📝</div>
+                  <h3 style={{ margin:0 }}>No Definitions Yet</h3>
+                  <p style={{ maxWidth:540 }}>Students will submit concise project definitions here. When finalized, faculty definitions will appear as a single-line preview for quick review.</p>
+                  <div style={{ display:'flex', gap:8, marginTop:6 }}>
+                    <button className="btn btn-primary" onClick={() => navigate('/admin/projects')}>Create Project</button>
+                    <button className="btn" onClick={() => window.scrollTo({ top:0, behavior:'smooth' })} style={{ background:'#eef2ff' }}>Refresh</button>
+                  </div>
                 </div>
               )}
 
-              {withDefinitions.map(p => (
+              {withDefinitions.filter(p => {
+                if (branchFilter === 'all') return true;
+                const enrollment = p.students && p.students.length > 0 ? p.students[0].enrollment : '';
+                return getBranch(enrollment) === branchFilter;
+              }).slice().sort(compareGroupNo).map(p => (
                 <div className="card" key={p._id}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
                     <div>
@@ -204,7 +259,7 @@ export default function AdminDashboard() {
                     <strong style={{ fontSize:13, color:'#555' }}>
                       📄 Student Submitted Definition:
                     </strong>
-                    <p style={{ margin:'8px 0 0', color:'#333', lineHeight:1.7, fontSize:14 }}>
+                    <p style={{ margin:'8px 0 0', color:'#333', lineHeight:1.7, fontSize:14, maxHeight:48, overflow:'hidden' }}>
                       {p.definition}
                     </p>
                   </div>
@@ -217,7 +272,7 @@ export default function AdminDashboard() {
                       <strong style={{ fontSize:13, color:'#16a34a' }}>
                         ✅ Faculty Finalized Definition:
                       </strong>
-                      <p style={{ margin:'8px 0 0', color:'#333', lineHeight:1.7, fontSize:14 }}>
+                      <p style={{ margin:'8px 0 0', color:'#333', fontSize:14, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }} title={p.finalDefinition}>
                         {p.finalDefinition}
                       </p>
                     </div>

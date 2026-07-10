@@ -194,7 +194,7 @@ export default function StudentTeam() {
                 Add details of all students in your project group
               </p>
             </div>
-                    !locked && (
+                    {!locked && (
                       <button type="button" className="btn btn-primary"
                         onClick={addMember}
                         disabled={members.length >= 7}>

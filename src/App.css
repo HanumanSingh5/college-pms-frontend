@@ -105,7 +105,7 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .navbar .user-pill {
@@ -124,6 +124,14 @@ body {
   background: rgba(255, 255, 255, 0.12);
   padding: 6px 10px;
   border-radius: 999px;
+}
+
+.navbar .user-meta span {
+  display: inline-block;
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .navbar .avatar {

@@ -23,6 +23,7 @@ export default function FacultyDashboard() {
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().slice(0, 10));
   const [selectedAttendanceProject, setSelectedAttendanceProject] = useState('');
   const [attendanceDrafts, setAttendanceDrafts] = useState({});
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [savingAttendance, setSavingAttendance] = useState(false);
   const token = localStorage.getItem('token');
   const name  = localStorage.getItem('name') || 'Faculty';
@@ -73,6 +74,7 @@ export default function FacultyDashboard() {
             draft[student._id] = res.data.attendance?.[student._id] || '';
           });
           setAttendanceDrafts(prev => ({ ...prev, [selectedAttendanceProject]: draft }));
+          setAttendanceRecords(res.data.project?.attendance || []);
         } catch (err) {
           console.error('Attendance load error', err.response?.data || err.message);
         }
@@ -136,6 +138,26 @@ export default function FacultyDashboard() {
         [studentId]: status,
       },
     }));
+  };
+
+  const attendanceStatusColor = (status) => {
+    if (status === 'absent' || status === 'late') return '#dc2626';
+    if (status === 'present') return '#047857';
+    if (status === 'excused') return '#1d4ed8';
+    return '#111';
+  };
+
+  const flattenProjectStudents = (proj) => {
+    const all = [];
+    (proj?.students || []).forEach((student) => {
+      all.push(student);
+      if (Array.isArray(student.teamMembers)) {
+        student.teamMembers.forEach((tm, idx) => {
+          all.push({ ...tm, _id: tm._id || tm.enrollment || `${student._id || proj._id}-tm-${idx}` });
+        });
+      }
+    });
+    return all;
   };
 
   const saveAttendance = async () => {
@@ -397,6 +419,48 @@ export default function FacultyDashboard() {
                     <button className="btn btn-primary" type="button" onClick={saveAttendance} disabled={savingAttendance}>
                       {savingAttendance ? 'Saving...' : '💾 Save Attendance'}
                     </button>
+                  </div>
+
+                  <div style={{ marginTop:28 }}>
+                    <h4 style={{ margin:'0 0 14px' }}>Attendance History for the Group</h4>
+                    {attendanceRecords.length === 0 ? (
+                      <p style={{ margin:0, color:'#6b7280' }}>No attendance records available yet.</p>
+                    ) : (
+                      <div style={{ overflowX:'auto' }}>
+                        <table style={{ width:'100%', minWidth:760, borderCollapse:'collapse' }}>
+                          <thead>
+                            <tr style={{ background:'#f9fafb' }}>
+                              <th style={{ textAlign:'left', padding:'10px 12px' }}>Date</th>
+                              <th style={{ textAlign:'left', padding:'10px 12px' }}>Student</th>
+                              <th style={{ textAlign:'left', padding:'10px 12px' }}>Enrollment</th>
+                              <th style={{ textAlign:'left', padding:'10px 12px' }}>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(() => {
+                              const proj = projects.find((p) => p._id === selectedAttendanceProject) || {};
+                              const members = flattenProjectStudents(proj);
+                              const memberById = Object.fromEntries(members.map((member) => [member._id, member]));
+                              return [...attendanceRecords]
+                                .sort((a, b) => (a.date || '').localeCompare(b.date || '') || (memberById[a.student]?.name || '').localeCompare(memberById[b.student]?.name || ''))
+                                .map((record, idx) => {
+                                  const member = memberById[record.student] || {};
+                                  return (
+                                    <tr key={`${record.student}-${record.date}-${idx}`}>
+                                      <td style={{ padding:'10px 12px' }}>{record.date}</td>
+                                      <td style={{ padding:'10px 12px' }}>{member.name || 'Unknown Student'}</td>
+                                      <td style={{ padding:'10px 12px' }}>{member.enrollment || '-'}</td>
+                                      <td style={{ padding:'10px 12px', textTransform:'capitalize', fontWeight:600, color: attendanceStatusColor(record.status) }}>
+                                        {record.status || 'Not marked'}
+                                      </td>
+                                    </tr>
+                                  );
+                                });
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 </>
               )}

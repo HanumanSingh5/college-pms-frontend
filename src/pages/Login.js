@@ -40,10 +40,17 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-box">
-        <h2>🎓 College PMS</h2>
-        <p style={{ textAlign:'center', color:'#888', marginBottom:24 }}>
-          Project Management System
-        </p>
+        <div className="brand">
+          <span className="brand-mark">🎓</span>
+          <div>
+            <h2>College PMS</h2>
+            <div className="subtitle">Project Management System</div>
+          </div>
+        </div>
+        <div className="intro">
+          <strong>Welcome back</strong>
+          Sign in to continue managing projects, tasks, and teams.
+        </div>
         <form onSubmit={submit}>
           <div className="form-group">
             <label>Email Address</label>

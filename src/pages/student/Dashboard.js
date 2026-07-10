@@ -284,7 +284,7 @@ export default function StudentDashboard() {
                             <td style={{ padding:'10px 12px' }}>{member.name || 'Unknown Member'}</td>
                             <td style={{ padding:'10px 12px' }}>{member.enrollment || '-'}</td>
                             <td style={{ padding:'10px 12px' }}>{item.date}</td>
-                            <td style={{ padding:'10px 12px', textTransform:'capitalize', fontWeight:600 }}>
+                            <td style={{ padding:'10px 12px', textTransform:'capitalize', fontWeight:600, color: item.status === 'absent' || item.status === 'late' ? '#dc2626' : item.status === 'present' ? '#047857' : item.status === 'excused' ? '#1d4ed8' : '#111' }}>
                               {item.status && item.status.trim() ? item.status : 'Not marked'}
                             </td>
                           </tr>

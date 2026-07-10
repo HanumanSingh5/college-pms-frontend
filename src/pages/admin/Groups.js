@@ -24,6 +24,7 @@ export default function AdminGroups() {
   const [viewDefs, setViewDefs]           = useState(null);
   const [assignForm, setAssignForm] = useState({ facultyId:'', groupNo:'' });
   const [teamForm, setTeamForm]     = useState([]);
+  const [editGroupNo, setEditGroupNo] = useState('');
   const [saving, setSaving]         = useState(false);
   const [search, setSearch]         = useState('');
   const [branchFilter, setBranchFilter] = useState('all');
@@ -96,6 +97,7 @@ export default function AdminGroups() {
 
   const openEditTeam = (group) => {
     setEditTeamModal(group);
+    setEditGroupNo(group.groupNo || '');
     setTeamForm(
       group.teamMembers && group.teamMembers.length > 0
         ? group.teamMembers.map(m => ({ ...m }))
@@ -109,13 +111,16 @@ export default function AdminGroups() {
     try {
       await axios.put(
         `${API}/api/admin/student/${editTeamModal.student._id}/team`,
-        { teamMembers: teamForm }, h
+        {
+          teamMembers: teamForm,
+          groupNo: editGroupNo.trim().toUpperCase(),
+        }, h
       );
       toast.success('Team updated successfully!');
       setEditTeamModal(null);
       load();
-    } catch {
-      toast.error('Failed to update team');
+    } catch (err) {
+      toast.error(err.response?.data?.msg || 'Failed to update team');
     } finally {
       setSaving(false);
     }
@@ -361,8 +366,17 @@ export default function AdminGroups() {
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
           <div style={{ background:'white', borderRadius:16, padding:32, width:'100%', maxWidth:620, maxHeight:'90vh', overflowY:'auto', boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
             <h3 style={{ marginBottom:4 }}>Edit Team — {editTeamModal.student.name}</h3>
-            <p style={{ color:'#888', fontSize:13, marginBottom:20 }}>Add, edit or remove team members for this group.</p>
+            <p style={{ color:'#888', fontSize:13, marginBottom:20 }}>Add, edit or remove team members for this group. You can also change the group number here.</p>
             <form onSubmit={saveTeam}>
+              <div className="form-group">
+                <label>Group Number</label>
+                <input
+                  type="text"
+                  placeholder="e.g. G-01"
+                  value={editGroupNo}
+                  onChange={e => setEditGroupNo(e.target.value)}
+                />
+              </div>
               {teamForm.map((m, i) => (
                 <div key={i} style={{ border:'1px solid #e5e7eb', borderRadius:10, padding:16, marginBottom:12 }}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>

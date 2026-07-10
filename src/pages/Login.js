@@ -49,7 +49,6 @@ export default function Login() {
         </div>
         <div className="intro">
           <strong>Welcome back</strong>
-          Sign in to continue managing projects, tasks, and teams.
         </div>
         <form onSubmit={submit}>
           <div className="form-group">

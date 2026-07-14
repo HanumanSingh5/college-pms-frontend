@@ -25,6 +25,8 @@ export default function FacultyDashboard() {
   const [attendanceDrafts, setAttendanceDrafts] = useState({});
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [savingAttendance, setSavingAttendance] = useState(false);
+  const [groupNoDrafts, setGroupNoDrafts] = useState({});
+  const [savingGroupNo, setSavingGroupNo] = useState(null);
   const token = localStorage.getItem('token');
   const name  = localStorage.getItem('name') || 'Faculty';
   const h = useMemo(() => ({ headers: { Authorization: 'Bearer ' + token } }), [token]);
@@ -169,15 +171,17 @@ export default function FacultyDashboard() {
   };
 
   const compareGroupNo = (a, b) => {
-    if (!a.groupNo && !b.groupNo) return 0;
-    if (!a.groupNo) return 1;
-    if (!b.groupNo) return -1;
-    const aNum = parseGroupNo(a.groupNo);
-    const bNum = parseGroupNo(b.groupNo);
+    const aLabel = getEffectiveGroupNo(a) || '';
+    const bLabel = getEffectiveGroupNo(b) || '';
+    if (!aLabel && !bLabel) return 0;
+    if (!aLabel) return 1;
+    if (!bLabel) return -1;
+    const aNum = parseGroupNo(aLabel);
+    const bNum = parseGroupNo(bLabel);
     if (aNum !== null && bNum !== null) {
-      return aNum - bNum || a.groupNo.localeCompare(b.groupNo);
+      return aNum - bNum || aLabel.localeCompare(bLabel);
     }
-    return a.groupNo.localeCompare(b.groupNo);
+    return aLabel.localeCompare(bLabel);
   };
 
   const compareByName = (x, y) => {
@@ -196,6 +200,31 @@ export default function FacultyDashboard() {
     const bn = parseEnrollmentNum(b?.enrollment || b?._id || '');
     if (an !== null && bn !== null) return an - bn;
     return compareByName(a, b);
+  };
+
+  const getEffectiveGroupNo = (project) => project?.facultyGroupNo || project?.groupNo || '-';
+  const getDraftGroupNo = (project) => groupNoDrafts[project._id] ?? project?.facultyGroupNo ?? project?.groupNo ?? '';
+
+  const saveFacultyGroupNo = async (projectId) => {
+    const project = projects.find(p => p._id === projectId);
+    if (!project) return;
+    const value = (groupNoDrafts[projectId] ?? project.facultyGroupNo ?? project.groupNo ?? '').trim().toUpperCase();
+    if (value === project.facultyGroupNo) {
+      toast.info('No group number changes to save.');
+      return;
+    }
+
+    setSavingGroupNo(projectId);
+    try {
+      await axios.put(`${API}/api/faculty/project/${projectId}/faculty-group-no`, { facultyGroupNo: value }, h);
+      toast.success('Faculty group number updated.');
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.msg || 'Could not update group number');
+      console.error('Save faculty group error:', err.response?.data || err.message || err);
+    } finally {
+      setSavingGroupNo(null);
+    }
   };
 
   const saveAttendance = async () => {
@@ -318,7 +347,7 @@ export default function FacultyDashboard() {
                     <div style={{ flex:1 }}>
                       <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8, flexWrap:'wrap' }}>
                         <h3 style={{ margin:0 }}>{p.title||'Title not set'}</h3>
-                        <span style={{ background:'#e3f7f4', color:'#0b4f47', padding:'2px 10px', borderRadius:20, fontSize:12 }}>Group: {p.groupNo||'-'}</span>
+                        <span style={{ background:'#e3f7f4', color:'#0b4f47', padding:'2px 10px', borderRadius:20, fontSize:12 }}>Group: {getEffectiveGroupNo(p)}</span>
                         <span className={p.definitionStatus==='finalized'?'badge badge-success':p.definitionStatus==='submitted'?'badge badge-info':'badge badge-warning'}>
                           {p.definitionStatus==='finalized'?'✅ Finalized':p.definitionStatus==='submitted'?'📤 '+(p.definitions?.length||0)+' Definitions Submitted':'⏳ Pending'}
                         </span>
@@ -331,7 +360,29 @@ export default function FacultyDashboard() {
                         {p.students?.slice().sort(compareByName).map(s => <span key={s._id} style={{ background:'#f0fbf9', padding:'3px 10px', borderRadius:6, fontSize:12 }}>{s.name} ({s.enrollment||'-'})</span>)}
                       </div>
                     </div>
-                    <div style={{ marginLeft:16 }}>
+                    <div style={{ marginLeft:16, minWidth:240, display:'flex', flexDirection:'column', gap:8 }}>
+                      <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
+                        <input
+                          type="text"
+                          value={getDraftGroupNo(p)}
+                          onChange={(e) => setGroupNoDrafts(prev => ({ ...prev, [p._id]: e.target.value }))}
+                          placeholder="Enter your group number"
+                          style={{ flex:1, minWidth:140, padding:'10px 12px', border:'1px solid #d1d5db', borderRadius:8, fontSize:14 }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => saveFacultyGroupNo(p._id)}
+                          disabled={savingGroupNo === p._id}
+                          style={{ padding:'10px 14px', borderRadius:10, border:'none', background:'#0e9f8e', color:'white', cursor:'pointer', fontWeight:700, minWidth:120 }}
+                        >
+                          {savingGroupNo === p._id ? 'Saving...' : 'Save Group'}
+                        </button>
+                      </div>
+                      <div style={{ color:'#6b7280', fontSize:12 }}>
+                        This label is visible only to faculty. Admin group number remains unchanged.
+                      </div>
+                    </div>
+                  </div>
                       {p.definitionStatus==='submitted'&&<button className="btn btn-primary" type="button" onClick={() => openSelectModal(p)} style={{ whiteSpace:'nowrap' }}>✅ Select Definition</button>}
                       {p.definitionStatus==='finalized'&&<button className="btn btn-warning" type="button" onClick={() => openSelectModal(p)} style={{ whiteSpace:'nowrap', fontSize:12 }}>✏️ Change</button>}
                       {p.definitionStatus==='pending'&&<span style={{ color:'#aaa', fontSize:13 }}>Waiting for student...</span>}
@@ -369,7 +420,7 @@ export default function FacultyDashboard() {
                         rows.push(
                           <tr key={p._id + s._id + '-tm-' + ti} style={{ background:'#fafafa' }}>
                             <td>{pi * 100 + counter}</td>
-                            <td><span style={{ background:'#e3f7f4', color:'#0b4f47', padding:'2px 8px', borderRadius:20, fontSize:12 }}>{p.groupNo || '-'}</span></td>
+                            <td><span style={{ background:'#e3f7f4', color:'#0b4f47', padding:'2px 8px', borderRadius:20, fontSize:12 }}>{getEffectiveGroupNo(p)}</span></td>
                             <td>{tm.name}</td>
                             <td>{tm.enrollment || '-'}</td>
                             <td>{tm.studentClass || '-'}</td>
@@ -398,7 +449,7 @@ export default function FacultyDashboard() {
                 <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
                   <select value={selectedAttendanceProject} onChange={(e) => setSelectedAttendanceProject(e.target.value)} style={{ padding:'8px 10px', borderRadius:8, border:'1px solid #d1d5db' }}>
                     {projects.slice().sort(compareGroupNo).map((project) => (
-                      <option key={project._id} value={project._id}>{project.groupNo || '-'} - {project.title || 'Untitled'}</option>
+                      <option key={project._id} value={project._id}>{getEffectiveGroupNo(project)} - {project.title || 'Untitled'}</option>
                     ))}
                   </select>
                   <input type="date" value={attendanceDate} onChange={(e) => setAttendanceDate(e.target.value)} style={{ padding:'8px 10px', borderRadius:8, border:'1px solid #d1d5db' }} />

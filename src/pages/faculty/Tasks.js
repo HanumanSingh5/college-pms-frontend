@@ -38,6 +38,8 @@ export default function FacultyTasks() {
   const [form,       setForm]       = useState({ title:'', description:'', phase:'', projectId:'', dueDate:'' });
   const [editForm,   setEditForm]   = useState({ title:'', description:'', dueDate:'', status:'' });
 
+  const getEffectiveGroupNo = (project) => project?.facultyGroupNo || project?.groupNo || '-';
+
   const name  = localStorage.getItem('name')  || 'Faculty';
   const token = localStorage.getItem('token') || '';
   const h = { headers: { Authorization: 'Bearer ' + token } };
@@ -252,7 +254,7 @@ export default function FacultyTasks() {
               <div key={project?._id} style={{ marginBottom:28 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
                   <h3 style={{ margin:0, color:'#1e1b4b', fontSize:16 }}>{project?.title || 'Unknown'}</h3>
-                  <span style={{ background:'#6366f1', color:'white', padding:'3px 12px', borderRadius:20, fontSize:12, fontWeight:700 }}>{project?.groupNo || '-'}</span>
+                  <span style={{ background:'#6366f1', color:'white', padding:'3px 12px', borderRadius:20, fontSize:12, fontWeight:700 }}>{getEffectiveGroupNo(project)}</span>
                   <span style={{ color:'#94a3b8', fontSize:13 }}>{ptasks.length} task{ptasks.length!==1?'s':''}</span>
                 </div>
                 <div style={{ display:'grid', gap:12 }}>
@@ -335,7 +337,7 @@ export default function FacultyTasks() {
                         return (
                           <tr key={t._id} style={{ borderBottom:'1px solid #fee2e2' }}>
                             <td style={{ padding:'14px 16px', fontSize:13, color:'#64748b' }}>{i+1}</td>
-                            <td style={{ padding:'14px 16px' }}><span style={{ background:'#6366f1', color:'white', padding:'3px 10px', borderRadius:20, fontSize:12, fontWeight:700 }}>{t.project?.groupNo||'-'}</span></td>
+                            <td style={{ padding:'14px 16px' }}><span style={{ background:'#6366f1', color:'white', padding:'3px 10px', borderRadius:20, fontSize:12, fontWeight:700 }}>{getEffectiveGroupNo(t.project)}</span></td>
                             <td style={{ padding:'14px 16px' }}><strong style={{ fontSize:13, color:'#1e1b4b' }}>{t.title}</strong><br/><small style={{ color:'#94a3b8' }}>{t.phase||''}</small></td>
                             <td style={{ padding:'14px 16px', fontSize:13, color:'#475569' }}>{t.assignedTo?.map(s=>s.name).join(', ')}</td>
                             <td style={{ padding:'14px 16px', fontSize:13, color:'#dc2626', fontWeight:700 }}>{t.dueDate?new Date(t.dueDate).toLocaleDateString():'-'}</td>
@@ -365,7 +367,7 @@ export default function FacultyTasks() {
             <form onSubmit={createTask}>
               {[
                 { label:'Select Project Group *', type:'select', field:'projectId',
-                  options: projects.filter(p=>p.definitionStatus==='finalized').map(p => ({ value:p._id, label:`[${p.groupNo||'-'}] ${p.title||'Untitled'} (${p.students?.length||0} students)` })),
+                  options: projects.filter(p=>p.definitionStatus==='finalized').map(p => ({ value:p._id, label:`[${getEffectiveGroupNo(p)}] ${p.title||'Untitled'} (${p.students?.length||0} students)` })),
                   placeholder:'-- Select Project Group --' },
                 { label:'Project Phase *', type:'select', field:'phase',
                   options: PHASES.map(p => ({ value:p.value, label:p.label })),

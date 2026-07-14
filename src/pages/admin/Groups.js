@@ -175,6 +175,9 @@ export default function AdminGroups() {
             <div>
               <h2 style={{ margin:0 }}>Project Groups</h2>
               <p style={{ color:'#888', fontSize:14, margin:'4px 0 0' }}>Each student with a team forms a group. Assign groups to faculty.</p>
+              <p style={{ color:'#6b7280', fontSize:13, margin:'6px 0 0' }}>
+                Note: Faculty can edit their own displayed group number in the faculty portal. That faculty-side override does not change the admin-assigned group number shown here.
+              </p>
             </div>
             <div style={{ display:'flex', gap:10 }}>
               <span style={{ background:'#fef9c3', color:'#854d0e', padding:'6px 14px', borderRadius:20, fontSize:13, fontWeight:600 }}>{unassigned.length} Unassigned</span>
@@ -226,6 +229,7 @@ export default function AdminGroups() {
                       <span style={{ background:'#f3f4f6', color:'#9ca3af', padding:'3px 12px', borderRadius:20, fontSize:13 }}>No Group No.</span>
                     )}
                     <span style={{ fontWeight:600, fontSize:16 }}>{g.student.name}'s Group</span>
+                    <span style={{ color:'#6b7280', fontSize:12, marginLeft:8 }}>Admins see this value; faculty may see their own override.</span>
                     <span style={{ background:'#eff6ff', color:'#1d4ed8', padding:'2px 10px', borderRadius:20, fontSize:12, fontWeight:600 }}>
                       {getBranch(g.student?.enrollment)}
                     </span>

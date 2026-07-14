@@ -80,12 +80,14 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.16);
   gap: 16px;
   min-height: 72px;
+  flex-wrap: nowrap;
 }
 
 .navbar .brand {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -100,8 +102,24 @@ body {
   font-size: 18px;
 }
 
-.navbar h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
-.navbar .brand p { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+.navbar h2 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.navbar .brand p {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-top: 2px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .navbar-actions {
   display: flex;
@@ -109,6 +127,7 @@ body {
   gap: 12px;
   flex-wrap: nowrap;
   min-width: 0;
+  flex-shrink: 0;
 }
 
 .navbar .user-pill {

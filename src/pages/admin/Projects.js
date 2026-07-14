@@ -3,6 +3,7 @@ import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
 import { toast } from 'react-toastify';
+import { utils, writeFileXLSX } from 'xlsx';
 
 const API = process.env.REACT_APP_API_URL;
 
@@ -193,6 +194,33 @@ export default function AdminProjects() {
   };
 
   const rows = buildRows();
+  const exportRows = rows.map((row) => ({
+    'Sr.': row.srNo || '',
+    'Group No.': row.groupNo,
+    'Category': row.category,
+    'Enrollment No.': row.enrollment,
+    'Name': row.name,
+    'Role': row.isMain ? 'Leader' : 'Member',
+    'Email': row.email,
+    'Mobile': row.mobile,
+    'Class': row.cls,
+    'Project Title': row.title,
+    'Frontend': row.frontend,
+    'Backend': row.backend,
+    'Faculty Guide': row.faculty,
+  }));
+
+  const downloadProjectsExcel = () => {
+    if (exportRows.length === 0) {
+      toast.info('No projects available to download.');
+      return;
+    }
+    const worksheet = utils.json_to_sheet(exportRows);
+    const workbook = utils.book_new();
+    utils.book_append_sheet(workbook, worksheet, 'Projects');
+    writeFileXLSX(workbook, 'admin-projects.xlsx');
+  };
+
   const thStyle = { padding:'10px 10px', textAlign:'left', fontWeight:600, fontSize:12, color:'#374151', borderBottom:'2px solid #e5e7eb', whiteSpace:'nowrap', background:'#f9fafb' };
   const tdStyle = { padding:'9px 10px', fontSize:12, color:'#374151', verticalAlign:'middle', borderBottom:'1px solid #f0f0f0' };
 
@@ -203,9 +231,12 @@ export default function AdminProjects() {
         <Sidebar links={links} />
         <div className="main-content">
 
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-            <h2>Projects ({projects.length})</h2>
-            <button type="button" className="btn btn-primary" onClick={openCreate}>+ New Project</button>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
+            <h2 style={{ margin:0 }}>Projects ({projects.length})</h2>
+            <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+              <button type="button" className="btn btn-secondary" onClick={downloadProjectsExcel}>Download Excel</button>
+              <button type="button" className="btn btn-primary" onClick={openCreate}>+ New Project</button>
+            </div>
           </div>
 
           <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:16 }}>

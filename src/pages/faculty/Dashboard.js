@@ -383,10 +383,20 @@ export default function FacultyDashboard() {
                       </div>
                     </div>
                   </div>
-                      {p.definitionStatus==='submitted'&&<button className="btn btn-primary" type="button" onClick={() => openSelectModal(p)} style={{ whiteSpace:'nowrap' }}>✅ Select Definition</button>}
-                      {p.definitionStatus==='finalized'&&<button className="btn btn-warning" type="button" onClick={() => openSelectModal(p)} style={{ whiteSpace:'nowrap', fontSize:12 }}>✏️ Change</button>}
-                      {p.definitionStatus==='pending'&&<span style={{ color:'#aaa', fontSize:13 }}>Waiting for student...</span>}
-                    </div>
+                  <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:8 }}>
+                    {p.definitionStatus==='submitted' && (
+                      <button className="btn btn-primary" type="button" onClick={() => openSelectModal(p)} style={{ whiteSpace:'nowrap' }}>
+                        ✅ Select Definition
+                      </button>
+                    )}
+                    {p.definitionStatus==='finalized' && (
+                      <button className="btn btn-warning" type="button" onClick={() => openSelectModal(p)} style={{ whiteSpace:'nowrap', fontSize:12 }}>
+                        ✏️ Change
+                      </button>
+                    )}
+                    {p.definitionStatus==='pending' && (
+                      <span style={{ color:'#aaa', fontSize:13 }}>Waiting for student...</span>
+                    )}
                   </div>
                 </div>
               ))}

@@ -216,9 +216,13 @@ export default function FacultyDashboard() {
 
     setSavingGroupNo(projectId);
     try {
-      await axios.put(`${API}/api/faculty/project/${projectId}/faculty-group-no`, { facultyGroupNo: value }, h);
+      const res = await axios.put(`${API}/api/faculty/project/${projectId}/faculty-group-no`, { facultyGroupNo: value }, h);
       toast.success('Faculty group number updated.');
-      load();
+      setProjects(prev => prev.map((p) => p._id === projectId ? { ...p, facultyGroupNo: value } : p));
+      setGroupNoDrafts(prev => ({ ...prev, [projectId]: value }));
+      if (res.data?.project) {
+        setProjects(prev => prev.map((p) => p._id === projectId ? res.data.project : p));
+      }
     } catch (err) {
       toast.error(err.response?.data?.msg || 'Could not update group number');
       console.error('Save faculty group error:', err.response?.data || err.message || err);
@@ -366,20 +370,17 @@ export default function FacultyDashboard() {
                           type="text"
                           value={getDraftGroupNo(p)}
                           onChange={(e) => setGroupNoDrafts(prev => ({ ...prev, [p._id]: e.target.value }))}
-                          placeholder="Enter your group number"
-                          style={{ flex:1, minWidth:140, padding:'10px 12px', border:'1px solid #d1d5db', borderRadius:8, fontSize:14 }}
+                          placeholder="Enter group number"
+                          style={{ flex:1, maxWidth:180, padding:'8px 10px', border:'1px solid #d1d5db', borderRadius:8, fontSize:13 }}
                         />
                         <button
                           type="button"
                           onClick={() => saveFacultyGroupNo(p._id)}
                           disabled={savingGroupNo === p._id}
-                          style={{ padding:'10px 14px', borderRadius:10, border:'none', background:'#0e9f8e', color:'white', cursor:'pointer', fontWeight:700, minWidth:120 }}
+                          style={{ padding:'10px 14px', borderRadius:10, border:'none', background:'#0e9f8e', color:'white', cursor:'pointer', fontWeight:700, minWidth:140 }}
                         >
-                          {savingGroupNo === p._id ? 'Saving...' : 'Save Group'}
+                          {savingGroupNo === p._id ? 'Saving...' : 'Update Group Number'}
                         </button>
-                      </div>
-                      <div style={{ color:'#6b7280', fontSize:12 }}>
-                        This label is visible only to faculty. Admin group number remains unchanged.
                       </div>
                     </div>
                   </div>
@@ -416,7 +417,7 @@ export default function FacultyDashboard() {
                       rows.push(
                         <tr key={p._id + s._id + '-leader'}>
                           <td>{pi * 100 + counter}</td>
-                          <td><span style={{ background:'#e3f7f4', color:'#0b4f47', padding:'2px 8px', borderRadius:20, fontSize:12 }}>{p.groupNo || '-'}</span></td>
+                          <td><span style={{ background:'#e3f7f4', color:'#0b4f47', padding:'2px 8px', borderRadius:20, fontSize:12 }}>{getEffectiveGroupNo(p)}</span></td>
                           <td><strong>{s.name}</strong></td>
                           <td>{s.enrollment || '-'}</td>
                           <td>{s.studentClass || '-'}</td>
@@ -574,7 +575,7 @@ export default function FacultyDashboard() {
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                     <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
                       <h3 style={{ margin:0, fontSize:16 }}>{p.title||'Title not set'}</h3>
-                      <span style={{ background:'#0e9f8e', color:'white', padding:'2px 10px', borderRadius:20, fontSize:12, fontWeight:700 }}>{p.groupNo||'No Group'}</span>
+                      <span style={{ background:'#0e9f8e', color:'white', padding:'2px 10px', borderRadius:20, fontSize:12, fontWeight:700 }}>{getEffectiveGroupNo(p)||'No Group'}</span>
                       <span className={p.definitionStatus==='finalized'?'badge badge-success':p.definitionStatus==='submitted'?'badge badge-info':'badge badge-warning'}>
                         {p.definitionStatus==='finalized'?'✅ Finalized':p.definitionStatus==='submitted'?'📤 Submitted':'⏳ Pending'}
                       </span>

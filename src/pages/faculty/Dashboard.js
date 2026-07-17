@@ -361,10 +361,10 @@ export default function FacultyDashboard() {
                         {p.backend&&<span style={{ background:'#fef9c3', color:'#854d0e', padding:'2px 10px', borderRadius:6, fontSize:12 }}>Backend: {p.backend}</span>}
                       </div>
                       <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                        {p.students?.slice().sort(compareByName).map(s => <span key={s._id} style={{ background:'#f0fbf9', padding:'3px 10px', borderRadius:6, fontSize:12 }}>{s.name} ({s.enrollment||'-'})</span>)}
+                        {p.students?.filter(Boolean).slice().sort(compareByName).map(s => <span key={s._id} style={{ background:'#f0fbf9', padding:'3px 10px', borderRadius:6, fontSize:12 }}>{s.name} ({s.enrollment||'-'})</span>)}
                       </div>
                     </div>
-                    <div style={{ marginLeft:16, minWidth:240, display:'flex', flexDirection:'column', gap:8 }}>
+                    <div style={{ marginLeft:16, width:'100%', maxWidth:260, minWidth:0, display:'flex', flexDirection:'column', gap:8 }}>
                       <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
                         <input
                           type="text"
@@ -412,7 +412,7 @@ export default function FacultyDashboard() {
                   {projects.slice().sort(compareGroupNo).flatMap((p, pi) => {
                     const rows = [];
                     let counter = 0;
-                    (p.students || []).slice().sort(compareByName).forEach((s) => {
+                    (p.students || []).filter(Boolean).slice().sort(compareByName).forEach((s) => {
                       counter++;
                       rows.push(
                         <tr key={p._id + s._id + '-leader'}>

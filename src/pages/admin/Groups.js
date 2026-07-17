@@ -220,8 +220,8 @@ export default function AdminGroups() {
 
           {displayList.map((g) => (
             <div className="card" key={g.student._id} style={{ marginBottom:16 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
-                <div>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', marginBottom:12 }}>
+                <div style={{ minWidth:0 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:4 }}>
                     {g.groupNo ? (
                       <span style={{ background:'#4f46e5', color:'white', padding:'3px 12px', borderRadius:20, fontSize:13, fontWeight:700 }}>{g.groupNo}</span>

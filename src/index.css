@@ -135,8 +135,8 @@ tr:hover { background: #f9fafb; }
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 12px;
+  margin-bottom: 12px; /* reduce vertical gap under stats */
 }
 .stat-card {
   background: white;
@@ -162,11 +162,12 @@ tr:hover { background: #f9fafb; }
   box-sizing: border-box;
   max-width: 100%;
   word-break: break-word;
+  margin-bottom: 12px; /* tighter spacing between cards */
 }
 
 /* Ensure the admin header and card wrapper allow wrapping instead of forcing width */
 .main-content {
-  padding: 28px;
+  padding: 18px 28px; /* reduce top padding to close the gap */
   max-width: 100%;
 }
 

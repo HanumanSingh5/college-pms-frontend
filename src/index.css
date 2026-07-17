@@ -148,6 +148,32 @@ tr:hover { background: #f9fafb; }
 .stat-card h3 { font-size: 32px; color: #4f46e5; }
 .stat-card p  { color: #888; font-size: 14px; margin-top: 4px; }
 
+/* Defensive overrides to prevent cards stretching the layout */
+.stats-grid .stat-card {
+  min-height: 110px; /* keep card height compact */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 18px;
+}
+
+.card {
+  box-sizing: border-box;
+  max-width: 100%;
+  word-break: break-word;
+}
+
+/* Ensure the admin header and card wrapper allow wrapping instead of forcing width */
+.main-content {
+  padding: 28px;
+  max-width: 100%;
+}
+
+.navbar, .sidebar {
+  box-sizing: border-box;
+}
+
 .modal-overlay {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.5);

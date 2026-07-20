@@ -310,7 +310,18 @@ export default function AdminProjects() {
                       <td style={tdStyle}>{row.isFirst&&row.frontend!=='-'&&<span style={{ background:'#eff6ff', color:'#1d4ed8', padding:'2px 8px', borderRadius:6, fontSize:11, fontWeight:600 }}>{row.frontend}</span>}{row.isFirst&&row.frontend==='-'&&<span style={{ color:'#aaa', fontSize:11 }}>-</span>}</td>
                       <td style={tdStyle}>{row.isFirst&&row.backend!=='-'&&<span style={{ background:'#fef9c3', color:'#854d0e', padding:'2px 8px', borderRadius:6, fontSize:11, fontWeight:600 }}>{row.backend}</span>}{row.isFirst&&row.backend==='-'&&<span style={{ color:'#aaa', fontSize:11 }}>-</span>}</td>
                       <td style={tdStyle}>{row.isFirst&&<span style={{ fontSize:12 }}>{row.faculty}</span>}</td>
-                      <td style={tdStyle}>{row.isFirst&&<div style={{ display:'flex', gap:4 }}><button type="button" className="btn btn-warning" onClick={() => openEdit(row.project)} style={{ padding:'4px 8px', fontSize:11 }}>Edit</button><button type="button" className="btn btn-danger" onClick={() => remove(row.projectId)} style={{ padding:'4px 8px', fontSize:11 }}>Delete</button></div>}</td>
+                      <td style={tdStyle}>{row.isFirst&&(
+                        <div style={{ display:'flex', gap:8, alignItems:'center', justifyContent:'flex-end', whiteSpace:'nowrap' }}>
+                          <button type="button" className="btn btn-warning" onClick={() => openEdit(row.project)}
+                            style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', padding:'6px 10px', fontSize:12, borderRadius:8 }}>
+                            Edit
+                          </button>
+                          <button type="button" className="btn btn-danger" onClick={() => remove(row.projectId)}
+                            style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', padding:'6px 10px', fontSize:12, borderRadius:8 }}>
+                            Delete
+                          </button>
+                        </div>
+                      )}</td>
                     </tr>
                   );
                 })}

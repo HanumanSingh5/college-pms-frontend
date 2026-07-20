@@ -301,10 +301,19 @@ export default function AdminProjects() {
                       <td style={tdStyle}>{row.srNo&&<span style={{ fontWeight:700, color:'#4f46e5' }}>{row.srNo}</span>}</td>
                       <td style={tdStyle}>{row.isFirst&&<span style={{ background:'#4f46e5', color:'white', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:700 }}>{row.groupNo}</span>}</td>
                       <td style={tdStyle}>{row.isFirst&&row.category!=='-'&&<span style={{ background:catColor.bg, color:catColor.color, padding:'3px 8px', borderRadius:6, fontSize:11, fontWeight:600 }}>{row.category}</span>}</td>
-                      <td style={tdStyle}><span style={{ background:row.isMain===false?'#f3f4f6':'#eff6ff', color:row.isMain===false?'#6b7280':'#1d4ed8', padding:'2px 6px', borderRadius:4, fontSize:11, fontWeight:600 }}>{row.enrollment}</span></td>
-                      <td style={tdStyle}><strong>{row.name}</strong>{row.isMain===false&&<span style={{ background:'#f3f4f6', color:'#6b7280', fontSize:10, padding:'1px 5px', borderRadius:8, marginLeft:4 }}>member</span>}</td>
-                      <td style={{ ...tdStyle, fontSize:11 }}>{row.email}</td>
-                      <td style={tdStyle}>{row.mobile}</td>
+                      <td style={{ ...tdStyle, whiteSpace:'nowrap', maxWidth:120, overflow:'hidden', textOverflow:'ellipsis' }}>
+                        <span style={{ background:row.isMain===false?'#f3f4f6':'#eff6ff', color:row.isMain===false?'#6b7280':'#1d4ed8', padding:'2px 6px', borderRadius:4, fontSize:11, fontWeight:600, display:'inline-block', verticalAlign:'middle' }}>{row.enrollment}</span>
+                      </td>
+                      <td style={{ ...tdStyle, whiteSpace:'nowrap', maxWidth:200, overflow:'hidden', textOverflow:'ellipsis' }}>
+                        <strong style={{ display:'inline-block', verticalAlign:'middle' }}>{row.name}</strong>
+                        {row.isMain===false&&<span style={{ background:'#f3f4f6', color:'#6b7280', fontSize:10, padding:'1px 5px', borderRadius:8, marginLeft:6, display:'inline-block', verticalAlign:'middle' }}>member</span>}
+                      </td>
+                      <td style={{ ...tdStyle, fontSize:11, whiteSpace:'nowrap', maxWidth:220, overflow:'hidden', textOverflow:'ellipsis' }}>
+                        <span style={{ display:'inline-block', verticalAlign:'middle' }}>{row.email}</span>
+                      </td>
+                      <td style={{ ...tdStyle, whiteSpace:'nowrap', maxWidth:120, overflow:'hidden', textOverflow:'ellipsis' }}>
+                        <span style={{ display:'inline-block', verticalAlign:'middle' }}>{row.mobile}</span>
+                      </td>
                       <td style={tdStyle}>{row.cls}</td>
                       <td style={tdStyle}>{row.isFirst&&<strong style={{ fontSize:12 }}>{row.title}</strong>}</td>
                       <td style={tdStyle}>{row.isFirst&&row.frontend!=='-'&&<span style={{ background:'#eff6ff', color:'#1d4ed8', padding:'2px 8px', borderRadius:6, fontSize:11, fontWeight:600 }}>{row.frontend}</span>}{row.isFirst&&row.frontend==='-'&&<span style={{ color:'#aaa', fontSize:11 }}>-</span>}</td>

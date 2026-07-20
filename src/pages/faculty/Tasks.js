@@ -36,6 +36,7 @@ export default function FacultyTasks() {
   const [remarks,    setRemarks]    = useState({});  // { submissionIndex: text }
   const [savingRemark, setSavingRemark] = useState(null);
   const [form,       setForm]       = useState({ title:'', description:'', phase:'', projectId:'', dueDate:'' });
+  const [creatingTask, setCreatingTask] = useState(false);
   const [editForm,   setEditForm]   = useState({ title:'', description:'', dueDate:'', status:'' });
 
   const getEffectiveGroupNo = (project) => project?.facultyGroupNo || project?.groupNo || '-';
@@ -59,13 +60,18 @@ export default function FacultyTasks() {
   const createTask = async (e) => {
     e.preventDefault();
     if (!form.dueDate) return toast.error('Due date is required');
+    setCreatingTask(true);
     try {
       await axios.post(`${API}/api/faculty/task`, form, h);
       toast.success('Task assigned!');
       setShowModal(false);
       setForm({ title:'', description:'', phase:'', projectId:'', dueDate:'' });
       load();
-    } catch (err) { toast.error(err.response?.data?.msg || 'Failed'); }
+    } catch (err) {
+      toast.error(err.response?.data?.msg || 'Failed');
+    } finally {
+      setCreatingTask(false);
+    }
   };
 
   const saveEdit = async (e) => {
@@ -406,7 +412,7 @@ export default function FacultyTasks() {
               </div>
               <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
                 <button type="button" onClick={() => setShowModal(false)} style={{ padding:'11px 24px', borderRadius:10, border:'none', background:'#f1f5f9', color:'#475569', cursor:'pointer', fontWeight:600 }}>Cancel</button>
-                <button type="submit" style={{ padding:'11px 24px', borderRadius:10, border:'none', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'white', cursor:'pointer', fontWeight:700 }}>Assign Task</button>
+                <button type="submit" disabled={creatingTask} style={{ padding:'11px 24px', borderRadius:10, border:'none', background: creatingTask ? '#a5b4fc' : 'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'white', cursor: creatingTask ? 'not-allowed' : 'pointer', fontWeight:700 }}>{creatingTask ? 'Assigning...' : 'Assign Task'}</button>
               </div>
             </form>
           </div>
